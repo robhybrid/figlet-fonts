@@ -29,7 +29,7 @@ You can install the fonts by simply running
 sudo ./install.sh
 ```
 
-This will install the fonts to `/usr/share/figlet/`.
+This will install the fonts and the control files to `/usr/share/figlet/`.
 
 Build the preview
 -----------------
