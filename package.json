@@ -1,0 +1,26 @@
+{
+  "name": "figlet-fonts",
+  "version": "1.0.0",
+  "description": "ASCII-art display fonts for the command line.",
+  "keywords": [
+    "figlet",
+    "toilet",
+    "lolcat",
+    "cli"
+  ],
+  "homepage": "https://github.com/robhybrid/figlet-fonts#readme",
+  "bugs": {
+    "url": "https://github.com/robhybrid/figlet-fonts/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/robhybrid/figlet-fonts.git"
+  },
+  "license": "MIT",
+  "author": "Robert Townsend",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
