@@ -28,6 +28,7 @@
     "generate": "bash scripts/generate_examples.sh",
     "install-fonts": "bash scripts/install.sh --user",
     "extract": "node scripts/font-chars.js extract",
-    "apply": "node scripts/font-chars.js apply"
+    "apply": "node scripts/font-chars.js apply",
+    "preview": "node scripts/preview.js"
   }
 }
