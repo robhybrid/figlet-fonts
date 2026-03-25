@@ -26,6 +26,8 @@
   "scripts": {
     "start": "node scripts/watch.js",
     "generate": "bash scripts/generate_examples.sh",
-    "install-fonts": "bash scripts/install.sh --user"
+    "install-fonts": "bash scripts/install.sh --user",
+    "extract": "node scripts/font-chars.js extract",
+    "apply": "node scripts/font-chars.js apply"
   }
 }
