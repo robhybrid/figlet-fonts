@@ -4,7 +4,17 @@
 
 A curated collection of **436** ASCII art fonts for [figlet](http://www.figlet.org/) and [toilet](http://caca.zoy.org/wiki/toilet) — 395 `.flf` + 41 `.tlf` files.
 
-Install fonts to `/usr/share/figlet/` or `/usr/share/figlet/fonts/`.
+Install fonts and control files with the included script:
+
+```bash
+# Per-user install (no root required)
+bash scripts/install.sh --user
+
+# System-wide install (requires root)
+sudo bash scripts/install.sh
+```
+
+Or copy manually: fonts (`*.flf`, `*.tlf`) to `/usr/share/figlet/`, control files (`control/*.flc`) to `/usr/share/figlet/`.
 
 View all examples at [Examples.md](Examples.md).
 

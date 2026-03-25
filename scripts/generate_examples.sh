@@ -32,7 +32,7 @@ echo "Output file    : $OUTPUT"
 FONTS=()
 while IFS= read -r f; do
   FONTS+=("$f")
-done < <({ ls -1 "$FONT_DIR"/*.flf 2>/dev/null; ls -1 "$FONT_DIR"/*.tlf 2>/dev/null; } | sort)
+done < <(ls -1 "$FONT_DIR"/*.[ft]lf 2>/dev/null | sort)
 
 if [[ ${#FONTS[@]} -eq 0 ]]; then
   echo "No .flf/.tlf font files found in $FONT_DIR" >&2
