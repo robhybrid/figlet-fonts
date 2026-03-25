@@ -7,12 +7,16 @@ on:
       - main
     paths:
       - "**.flf"
+      - "**.tlf"
       - "scripts/generate_examples.sh"
   workflow_dispatch: # allow manual runs
 
 jobs:
   regenerate:
     runs-on: ubuntu-latest
+
+    # Don't run if this is already an auto-generated commit
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
 
     permissions:
       contents: write
@@ -32,3 +36,4 @@ jobs:
         with:
           commit_message: "chore: regenerate Examples.md [skip ci]"
           file_pattern: Examples.md
+          skip_dirty_check: false
