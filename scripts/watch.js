@@ -2,9 +2,9 @@
 // watch.js
 // Watches for .flf/.tlf font changes AND .chars mapping file changes.
 //
-// • Font change    → regenerates Examples.md, renders changed font to console
-// • .chars change  → runs font-chars apply (input.flf → input-b.flf),
-//                    then regenerates Examples.md, renders the output font
+// • Font change    → delta-updates Examples.md, renders changed font to console
+// • .chars change  → applies mapping (input.flf → input-b.flf),
+//                    immediately renders preview, then delta-updates Examples.md
 
 const fs = require("fs");
 const path = require("path");
@@ -12,7 +12,7 @@ const { execSync, spawnSync } = require("child_process");
 const { cmdApply, fontFromChars, defaultOutputFont } = require("./font-chars");
 
 const ROOT = path.resolve(__dirname, "..");
-const GENERATE = path.join(__dirname, "generate_examples.sh");
+const EXAMPLES = path.join(ROOT, "Examples.md");
 
 // ANSI helpers
 const ESC = "\x1b";
@@ -40,7 +40,11 @@ function clearPreviousOutput() {
   }
 }
 
-function renderFont(fontPath, label, color) {
+// ---------------------------------------------------------------------------
+// Render a font preview to stdout (clears previous output first)
+// ---------------------------------------------------------------------------
+
+function renderFontPreview(fontPath, label, color, status) {
   const fontFile = path.basename(fontPath);
   const fontName = fontFile.replace(/\.[ft]lf$/, "");
 
@@ -48,7 +52,7 @@ function renderFont(fontPath, label, color) {
     encoding: "utf8",
   });
 
-  const rendered = result.stdout || "";
+  const rendered = (result.stdout || "").replace(/\s+$/, "");
   const lines = rendered.split("\n");
 
   const output = [
@@ -56,7 +60,7 @@ function renderFont(fontPath, label, color) {
     `${DIM}${"─".repeat(60)}${RESET}`,
     ...lines,
     `${DIM}${"─".repeat(60)}${RESET}`,
-    `${GREEN}✓ Examples.md regenerated${RESET}  ${DIM}${new Date().toLocaleTimeString()}${RESET}`,
+    `${GREEN}${status || "✓"}${RESET}  ${DIM}${new Date().toLocaleTimeString()}${RESET}`,
     "",
   ];
 
@@ -65,7 +69,52 @@ function renderFont(fontPath, label, color) {
   lastOutputLines = output.length;
 }
 
-function regenerateExamples() {
+// ---------------------------------------------------------------------------
+// Delta update: replace one font's section in Examples.md
+// ---------------------------------------------------------------------------
+
+function renderFontToMd(fontPath) {
+  const fontFile = path.basename(fontPath);
+  const fontName = fontFile.replace(/\.[ft]lf$/, "");
+
+  const result = spawnSync("figlet", ["-d", ROOT, "-f", fontName, fontName], {
+    encoding: "utf8",
+  });
+
+  const rendered = result.stdout || "";
+  return `${fontFile}\n\`\`\`\n${rendered}\`\`\`\n\n\n`;
+}
+
+function deltaUpdateExamples(fontPath) {
+  if (!fs.existsSync(EXAMPLES)) return false;
+
+  const fontFile = path.basename(fontPath);
+  const content = fs.readFileSync(EXAMPLES, "utf8");
+
+  // Find the section for this font: starts with "FontFile\n```" and ends before the next font entry
+  // Pattern: fontFile\n```\n...```\n\n\n
+  const escaped = fontFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const sectionRe = new RegExp(
+    `${escaped}\\n\`\`\`\\n[\\s\\S]*?\`\`\`\\n\\n\\n`,
+    "g",
+  );
+
+  if (!sectionRe.test(content)) {
+    // Font not yet in Examples.md — fall back to full regeneration
+    return false;
+  }
+
+  const newSection = renderFontToMd(fontPath);
+  const updated = content.replace(sectionRe, newSection);
+
+  if (updated === content) return false; // nothing changed
+
+  fs.writeFileSync(EXAMPLES, updated, "utf8");
+  return true;
+}
+
+function fullRegenerate() {
+  const GENERATE = path.join(__dirname, "generate_examples.sh");
   execSync(`bash "${GENERATE}"`, { stdio: "pipe" });
 }
 
@@ -75,8 +124,12 @@ function regenerateExamples() {
 
 function onFontChange(fontPath) {
   try {
-    regenerateExamples();
-    renderFont(fontPath, path.basename(fontPath), CYAN);
+    const updated = deltaUpdateExamples(fontPath);
+    const status = updated
+      ? "✓ Examples.md updated (delta)"
+      : "✓ Examples.md regenerated (full)";
+    if (!updated) fullRegenerate();
+    renderFontPreview(fontPath, path.basename(fontPath), CYAN, status);
   } catch (err) {
     clearPreviousOutput();
     process.stdout.write(`${YELLOW}⚠ Error: ${err.message}${RESET}\n`);
@@ -95,21 +148,36 @@ function onCharsChange(charsPath) {
   const inputName = path.basename(inputFont);
   const outputName = path.basename(outputFont);
 
-  clearPreviousOutput();
-  const msg =
-    `${BOLD}${MAGENTA}▶ ${charsName}${RESET}  ` +
-    `${DIM}${inputName} → ${outputName}${RESET}\n`;
-  process.stdout.write(msg);
-  lastOutputLines = 1;
-
   try {
     if (!fs.existsSync(inputFont)) {
       throw new Error(`Input font not found: ${inputFont}`);
     }
-    // Apply the mapping: input.flf + input.chars → input-b.flf
+
+    // 1. Apply the mapping immediately
     cmdApply(inputFont, charsPath, outputFont);
-    regenerateExamples();
-    renderFont(outputFont, `${outputName} (from ${charsName})`, MAGENTA);
+
+    // 2. Render preview RIGHT NOW (before Examples.md update)
+    renderFontPreview(
+      outputFont,
+      `${outputName}  ${DIM}(${charsName} → ${inputName})${RESET}`,
+      MAGENTA,
+      "⟳ Updating Examples.md...",
+    );
+
+    // 3. Delta-update Examples.md for the output font
+    const updated = deltaUpdateExamples(outputFont);
+    if (!updated) fullRegenerate();
+
+    // 4. Re-render with final status
+    const status = updated
+      ? "✓ Examples.md updated (delta)"
+      : "✓ Examples.md regenerated (full)";
+    renderFontPreview(
+      outputFont,
+      `${outputName}  ${DIM}(${charsName} → ${inputName})${RESET}`,
+      MAGENTA,
+      status,
+    );
   } catch (err) {
     clearPreviousOutput();
     process.stdout.write(
@@ -183,8 +251,8 @@ const charsCount = charsWatchers.size;
 process.stdout.write(
   `${BOLD}figlet-fonts watcher${RESET}\n` +
     `${DIM}Watching ${fontCount} fonts + ${charsCount} .chars files in ${ROOT}${RESET}\n` +
-    `${DIM}• Edit any .flf/.tlf → regenerates Examples.md${RESET}\n` +
-    `${DIM}• Edit any .chars   → applies mapping and regenerates${RESET}\n\n`,
+    `${DIM}• Edit any .flf/.tlf  → preview + delta Examples.md update${RESET}\n` +
+    `${DIM}• Edit any .chars     → apply mapping, instant preview, delta update${RESET}\n\n`,
 );
 lastOutputLines = 5;
 
