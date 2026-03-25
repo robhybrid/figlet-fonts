@@ -1,0 +1,34 @@
+name: Regenerate Examples
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - "**.flf"
+      - "scripts/generate_examples.sh"
+  workflow_dispatch: # allow manual runs
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install figlet
+        run: sudo apt-get install -y figlet
+
+      - name: Generate Examples.md
+        run: bash scripts/generate_examples.sh
+
+      - name: Commit updated Examples.md
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: regenerate Examples.md [skip ci]"
+          file_pattern: Examples.md
