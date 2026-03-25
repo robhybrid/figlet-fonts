@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # generate_examples.sh
-# Regenerates Examples.md by rendering each .flf font using figlet.
+# Regenerates Examples.md by rendering each .flf/.tlf font using figlet.
 # Usage: ./scripts/generate_examples.sh [--font-dir <dir>] [--output <file>]
 #
-# Compatible with bash 3+ (macOS system bash) and GNU/BSD find.
+# Compatible with bash 3+ (macOS system bash) and BSD/GNU tools.
 
 set -euo pipefail
 
@@ -28,21 +28,21 @@ fi
 echo "Font directory : $FONT_DIR"
 echo "Output file    : $OUTPUT"
 
-# Collect and sort all .flf and .tlf files (compatible with BSD & GNU find)
-FONTS=()
-while IFS= read -r f; do
-  FONTS+=("$f")
-done < <(ls -1 "$FONT_DIR"/*.[ft]lf 2>/dev/null | sort)
+# Collect and sort all .flf and .tlf files into a temp list
+FONT_LIST="$(mktemp)"
+trap 'rm -f "$FONT_LIST"' EXIT
+ls -1 "$FONT_DIR"/*.[ft]lf 2>/dev/null | sort > "$FONT_LIST"
 
-if [[ ${#FONTS[@]} -eq 0 ]]; then
+FONT_COUNT=$(wc -l < "$FONT_LIST" | tr -d ' ')
+if [[ "$FONT_COUNT" -eq 0 ]]; then
   echo "No .flf/.tlf font files found in $FONT_DIR" >&2
   exit 1
 fi
 
-echo "Found ${#FONTS[@]} fonts. Generating..."
+echo "Found $FONT_COUNT fonts. Generating..."
 
 TMP="$(mktemp)"
-trap 'rm -f "$TMP"' EXIT
+trap 'rm -f "$FONT_LIST" "$TMP"' EXIT
 
 {
   echo "Examples"
@@ -51,19 +51,18 @@ trap 'rm -f "$TMP"' EXIT
   echo "Examples of the available fonts using the font name for the text."
   echo ""
 
-  for font_path in "${FONTS[@]}"; do
+  while IFS= read -r font_path; do
     font_file="$(basename "$font_path")"
     font_name="${font_file%.flf}"
     font_name="${font_name%.tlf}"
 
     echo "$font_file"
     echo '```'
-    # Use the font name as the sample text; fall back gracefully on errors
     figlet -d "$FONT_DIR" -f "$font_name" "$font_name" 2>/dev/null || true
     echo '```'
     echo ""
     echo ""
-  done
+  done < "$FONT_LIST"
 } > "$TMP"
 
 mv "$TMP" "$OUTPUT"

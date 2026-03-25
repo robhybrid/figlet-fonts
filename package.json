@@ -6,7 +6,10 @@
     "figlet",
     "toilet",
     "lolcat",
-    "cli"
+    "cli",
+    "ascii",
+    "ascii-art",
+    "fonts"
   ],
   "homepage": "https://github.com/robhybrid/figlet-fonts#readme",
   "bugs": {
@@ -21,6 +24,8 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node scripts/watch.js",
+    "generate": "bash scripts/generate_examples.sh",
+    "install-fonts": "bash scripts/install.sh --user"
   }
 }
