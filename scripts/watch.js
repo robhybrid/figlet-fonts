@@ -79,25 +79,32 @@ function getRenderText(fontName) {
 // Render a font preview to stdout
 // ---------------------------------------------------------------------------
 
+function termWidth() {
+  return process.stdout.columns || 80;
+}
+
 function renderFontPreview(fontPath, label, color, status) {
   const fontFile = path.basename(fontPath);
   const fontName = fontFile.replace(/\.[ft]lf$/, "");
   const text = getRenderText(fontName);
+  const width = termWidth();
 
-  const result = spawnSync("figlet", ["-d", ROOT, "-f", fontName, text], {
-    encoding: "utf8",
-  });
+  const result = spawnSync(
+    "figlet",
+    ["-d", ROOT, "-f", fontName, "-w", String(width), text],
+    { encoding: "utf8" },
+  );
 
   const rendered = (result.stdout || "").replace(/\s+$/, "");
   const lines = rendered.split("\n");
-
+  const sep = `${DIM}${"─".repeat(width)}${RESET}`;
   const modeLine = `${DIM}Mode: ${RESET}${BOLD}${modeLabel()}${RESET}  ${DIM}(N)ame (A)ll (S)ample (E)nter${RESET}`;
 
   const output = [
     `${BOLD}${color}▶ ${label || fontFile}${RESET}`,
-    `${DIM}${"─".repeat(60)}${RESET}`,
+    sep,
     ...lines,
-    `${DIM}${"─".repeat(60)}${RESET}`,
+    sep,
     `${GREEN}${status || "✓"}${RESET}  ${DIM}${new Date().toLocaleTimeString()}${RESET}`,
     modeLine,
     "",
