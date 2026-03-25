@@ -45,15 +45,8 @@ const BLUE = `${ESC}[34m`;
 let lastOutputLines = 0;
 
 function clearPreviousOutput() {
-  if (lastOutputLines > 0) {
-    process.stdout.write(MOVE_UP(lastOutputLines));
-    for (let i = 0; i < lastOutputLines; i++) {
-      process.stdout.write(CLEAR_LINE + (i < lastOutputLines - 1 ? "\n" : ""));
-    }
-    if (lastOutputLines > 1) {
-      process.stdout.write(MOVE_UP(lastOutputLines - 1));
-    }
-  }
+  // Clear entire screen and move cursor to top-left
+  process.stdout.write(`${ESC}[2J${ESC}[H`);
 }
 
 function modeLabel() {
