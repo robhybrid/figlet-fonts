@@ -1,0 +1,8 @@
+# Font character mapping files (local working files, not committed)
+*.chars
+
+# Node
+node_modules/
+
+# macOS
+.DS_Store
