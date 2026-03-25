@@ -1,18 +1,33 @@
 #!/usr/bin/env node
 // watch.js
-// Watches for .flf/.tlf font changes AND .chars mapping file changes.
+// Watches .flf/.tlf fonts and .chars mapping files.
 //
-// • Font change    → delta-updates Examples.md, renders changed font to console
-// • .chars change  → applies mapping (input.flf → input-b.flf),
-//                    immediately renders preview, then delta-updates Examples.md
+// Interactive render modes (press key while running):
+//   N  — render font Name (default)
+//   A  — render All characters (abcdefghijklmnopqrstuvwxyz 0-9)
+//   S  — render Sample text (pangram)
+//   E  — Enter custom sample text
+//
+// • Font change   → preview + delta Examples.md update
+// • .chars change → apply mapping, instant preview, delta update
 
 const fs = require("fs");
 const path = require("path");
+const readline = require("readline");
 const { execSync, spawnSync } = require("child_process");
 const { cmdApply, fontFromChars, defaultOutputFont } = require("./font-chars");
 
 const ROOT = path.resolve(__dirname, "..");
 const EXAMPLES = path.join(ROOT, "Examples.md");
+
+const DEFAULT_SAMPLE = "Mr. Jock, TV quiz PhD, bags few lynx.";
+const ALL_CHARS =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz\n0123456789\n!@#$%^&*()-_=+[]{}|;':\",./<>?";
+
+// Render state
+let renderMode = "N"; // N | A | S | E
+let customSample = DEFAULT_SAMPLE;
+let lastFontPath = null;
 
 // ANSI helpers
 const ESC = "\x1b";
@@ -25,6 +40,7 @@ const MAGENTA = `${ESC}[35m`;
 const YELLOW = `${ESC}[33m`;
 const GREEN = `${ESC}[32m`;
 const DIM = `${ESC}[2m`;
+const BLUE = `${ESC}[34m`;
 
 let lastOutputLines = 0;
 
@@ -40,20 +56,49 @@ function clearPreviousOutput() {
   }
 }
 
+function modeLabel() {
+  switch (renderMode) {
+    case "N":
+      return `[N] Name`;
+    case "A":
+      return `[A] All chars`;
+    case "S":
+      return `[S] Sample`;
+    case "E":
+      return `[E] "${customSample.slice(0, 30)}${customSample.length > 30 ? "…" : ""}"`;
+  }
+}
+
+function getRenderText(fontName) {
+  switch (renderMode) {
+    case "N":
+      return fontName;
+    case "A":
+      return ALL_CHARS;
+    case "S":
+      return DEFAULT_SAMPLE;
+    case "E":
+      return customSample;
+  }
+}
+
 // ---------------------------------------------------------------------------
-// Render a font preview to stdout (clears previous output first)
+// Render a font preview to stdout
 // ---------------------------------------------------------------------------
 
 function renderFontPreview(fontPath, label, color, status) {
   const fontFile = path.basename(fontPath);
   const fontName = fontFile.replace(/\.[ft]lf$/, "");
+  const text = getRenderText(fontName);
 
-  const result = spawnSync("figlet", ["-d", ROOT, "-f", fontName, fontName], {
+  const result = spawnSync("figlet", ["-d", ROOT, "-f", fontName, text], {
     encoding: "utf8",
   });
 
   const rendered = (result.stdout || "").replace(/\s+$/, "");
   const lines = rendered.split("\n");
+
+  const modeLine = `${DIM}Mode: ${RESET}${BOLD}${modeLabel()}${RESET}  ${DIM}(N)ame (A)ll (S)ample (E)nter${RESET}`;
 
   const output = [
     `${BOLD}${color}▶ ${label || fontFile}${RESET}`,
@@ -61,6 +106,7 @@ function renderFontPreview(fontPath, label, color, status) {
     ...lines,
     `${DIM}${"─".repeat(60)}${RESET}`,
     `${GREEN}${status || "✓"}${RESET}  ${DIM}${new Date().toLocaleTimeString()}${RESET}`,
+    modeLine,
     "",
   ];
 
@@ -70,7 +116,7 @@ function renderFontPreview(fontPath, label, color, status) {
 }
 
 // ---------------------------------------------------------------------------
-// Delta update: replace one font's section in Examples.md
+// Delta update Examples.md
 // ---------------------------------------------------------------------------
 
 function renderFontToMd(fontPath) {
@@ -91,23 +137,17 @@ function deltaUpdateExamples(fontPath) {
   const fontFile = path.basename(fontPath);
   const content = fs.readFileSync(EXAMPLES, "utf8");
 
-  // Find the section for this font: starts with "FontFile\n```" and ends before the next font entry
-  // Pattern: fontFile\n```\n...```\n\n\n
   const escaped = fontFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const sectionRe = new RegExp(
     `${escaped}\\n\`\`\`\\n[\\s\\S]*?\`\`\`\\n\\n\\n`,
     "g",
   );
 
-  if (!sectionRe.test(content)) {
-    // Font not yet in Examples.md — fall back to full regeneration
-    return false;
-  }
+  if (!sectionRe.test(content)) return false;
 
   const newSection = renderFontToMd(fontPath);
   const updated = content.replace(sectionRe, newSection);
-
-  if (updated === content) return false; // nothing changed
+  if (updated === content) return false;
 
   fs.writeFileSync(EXAMPLES, updated, "utf8");
   return true;
@@ -119,16 +159,17 @@ function fullRegenerate() {
 }
 
 // ---------------------------------------------------------------------------
-// Handle a changed font file
+// Font / .chars change handlers
 // ---------------------------------------------------------------------------
 
 function onFontChange(fontPath) {
+  lastFontPath = fontPath;
   try {
     const updated = deltaUpdateExamples(fontPath);
+    if (!updated) fullRegenerate();
     const status = updated
       ? "✓ Examples.md updated (delta)"
       : "✓ Examples.md regenerated (full)";
-    if (!updated) fullRegenerate();
     renderFontPreview(fontPath, path.basename(fontPath), CYAN, status);
   } catch (err) {
     clearPreviousOutput();
@@ -137,26 +178,22 @@ function onFontChange(fontPath) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Handle a changed .chars file
-// ---------------------------------------------------------------------------
-
 function onCharsChange(charsPath) {
   const inputFont = fontFromChars(charsPath);
   const outputFont = defaultOutputFont(inputFont);
   const charsName = path.basename(charsPath);
   const inputName = path.basename(inputFont);
   const outputName = path.basename(outputFont);
+  lastFontPath = outputFont;
 
   try {
-    if (!fs.existsSync(inputFont)) {
+    if (!fs.existsSync(inputFont))
       throw new Error(`Input font not found: ${inputFont}`);
-    }
 
-    // 1. Apply the mapping immediately
+    // 1. Apply mapping
     cmdApply(inputFont, charsPath, outputFont);
 
-    // 2. Render preview RIGHT NOW (before Examples.md update)
+    // 2. Instant preview
     renderFontPreview(
       outputFont,
       `${outputName}  ${DIM}(${charsName} → ${inputName})${RESET}`,
@@ -164,14 +201,14 @@ function onCharsChange(charsPath) {
       "⟳ Updating Examples.md...",
     );
 
-    // 3. Delta-update Examples.md for the output font
+    // 3. Delta update
     const updated = deltaUpdateExamples(outputFont);
     if (!updated) fullRegenerate();
-
-    // 4. Re-render with final status
     const status = updated
       ? "✓ Examples.md updated (delta)"
       : "✓ Examples.md regenerated (full)";
+
+    // 4. Final render
     renderFontPreview(
       outputFont,
       `${outputName}  ${DIM}(${charsName} → ${inputName})${RESET}`,
@@ -185,6 +222,96 @@ function onCharsChange(charsPath) {
     );
     lastOutputLines = 1;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Interactive keyboard input
+// ---------------------------------------------------------------------------
+
+function promptEnterText() {
+  // Temporarily disable raw mode to get a normal readline prompt
+  if (process.stdin.isTTY) process.stdin.setRawMode(false);
+
+  clearPreviousOutput();
+  process.stdout.write(`\n${BLUE}Enter sample text: ${RESET}`);
+  lastOutputLines = 0;
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  rl.question("", (answer) => {
+    rl.close();
+    customSample = answer.trim() || DEFAULT_SAMPLE;
+    renderMode = "E";
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(true);
+      process.stdin.resume();
+    }
+    // Re-render last font with new text
+    if (lastFontPath) {
+      renderFontPreview(
+        lastFontPath,
+        path.basename(lastFontPath),
+        CYAN,
+        `✓ Mode: ${modeLabel()}`,
+      );
+    } else {
+      process.stdout.write(
+        `${GREEN}Sample set. Waiting for font change...${RESET}\n`,
+      );
+      lastOutputLines = 1;
+    }
+  });
+}
+
+function setupKeyboard() {
+  if (!process.stdin.isTTY) return; // non-interactive (piped, CI, etc.)
+
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+  process.stdin.setEncoding("utf8");
+
+  process.stdin.on("data", (key) => {
+    // Ctrl+C
+    if (key === "\u0003") {
+      process.emit("SIGINT");
+      return;
+    }
+
+    const k = key.toLowerCase();
+
+    if (k === "n") {
+      renderMode = "N";
+      if (lastFontPath)
+        renderFontPreview(
+          lastFontPath,
+          path.basename(lastFontPath),
+          CYAN,
+          `✓ Mode: ${modeLabel()}`,
+        );
+    } else if (k === "a") {
+      renderMode = "A";
+      if (lastFontPath)
+        renderFontPreview(
+          lastFontPath,
+          path.basename(lastFontPath),
+          CYAN,
+          `✓ Mode: ${modeLabel()}`,
+        );
+    } else if (k === "s") {
+      renderMode = "S";
+      if (lastFontPath)
+        renderFontPreview(
+          lastFontPath,
+          path.basename(lastFontPath),
+          CYAN,
+          `✓ Mode: ${modeLabel()}`,
+        );
+    } else if (k === "e") {
+      promptEnterText();
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -227,12 +354,10 @@ function scanAndWatch() {
   }
 }
 
-// Watch root for new files
 const dirWatcher = fs.watch(ROOT, (event, filename) => {
   if (!filename) return;
   const full = path.join(ROOT, filename);
   if (!fs.existsSync(full)) return;
-
   if (/\.[ft]lf$/.test(filename)) {
     watchFont(full);
     onFontChange(full);
@@ -244,6 +369,7 @@ const dirWatcher = fs.watch(ROOT, (event, filename) => {
 });
 
 scanAndWatch();
+setupKeyboard();
 
 const fontCount = fontWatchers.size;
 const charsCount = charsWatchers.size;
@@ -251,15 +377,17 @@ const charsCount = charsWatchers.size;
 process.stdout.write(
   `${BOLD}figlet-fonts watcher${RESET}\n` +
     `${DIM}Watching ${fontCount} fonts + ${charsCount} .chars files in ${ROOT}${RESET}\n` +
-    `${DIM}• Edit any .flf/.tlf  → preview + delta Examples.md update${RESET}\n` +
-    `${DIM}• Edit any .chars     → apply mapping, instant preview, delta update${RESET}\n\n`,
+    `${DIM}• Edit .flf/.tlf or .chars → auto-preview + Examples.md update${RESET}\n` +
+    `${DIM}• Keys: (N)ame  (A)ll chars  (S)ample  (E)nter text${RESET}\n` +
+    `${DIM}• Default sample: "${DEFAULT_SAMPLE}"${RESET}\n\n`,
 );
-lastOutputLines = 5;
+lastOutputLines = 6;
 
 process.on("SIGINT", () => {
   dirWatcher.close();
   for (const w of fontWatchers.values()) w.close();
   for (const w of charsWatchers.values()) w.close();
+  if (process.stdin.isTTY) process.stdin.setRawMode(false);
   process.stdout.write(`\n${DIM}Watcher stopped.${RESET}\n`);
   process.exit(0);
 });
