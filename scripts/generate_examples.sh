@@ -28,14 +28,14 @@ fi
 echo "Font directory : $FONT_DIR"
 echo "Output file    : $OUTPUT"
 
-# Collect and sort all .flf files (compatible with BSD & GNU find)
+# Collect and sort all .flf and .tlf files (compatible with BSD & GNU find)
 FONTS=()
 while IFS= read -r f; do
   FONTS+=("$f")
-done < <(ls -1 "$FONT_DIR"/*.flf 2>/dev/null | sort)
+done < <({ ls -1 "$FONT_DIR"/*.flf 2>/dev/null; ls -1 "$FONT_DIR"/*.tlf 2>/dev/null; } | sort)
 
 if [[ ${#FONTS[@]} -eq 0 ]]; then
-  echo "No .flf font files found in $FONT_DIR" >&2
+  echo "No .flf/.tlf font files found in $FONT_DIR" >&2
   exit 1
 fi
 
@@ -54,6 +54,7 @@ trap 'rm -f "$TMP"' EXIT
   for font_path in "${FONTS[@]}"; do
     font_file="$(basename "$font_path")"
     font_name="${font_file%.flf}"
+    font_name="${font_name%.tlf}"
 
     echo "$font_file"
     echo '```'
