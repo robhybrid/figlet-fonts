@@ -126,3 +126,17 @@ A [GitHub Actions workflow](.github/workflows/regenerate-examples.yml) runs this
 | [unlessgames/figlet-fonts](https://github.com/unlessgames/figlet-fonts) |     3 | `terminus`, `terminus_dots`, `wideterm` — merged via [xero PR #31](https://github.com/xero/figlet-fonts/pull/31)                                                                                                                                                                                                     |
 
 View all font examples at [Examples.md](Examples.md).
+
+---
+
+## Game Portal
+
+A browser arcade lives in [`portal/`](portal/) — branded **PORTAL**, with three playable cabinets (Neon Serpent, Brick Signal, Glyph Match) and a live figlet font previewer that loads fonts from this repo.
+
+```bash
+# From the repo root (fonts must be served as ../ from /portal/)
+npm run portal
+# open http://localhost:4173/portal/
+```
+
+Or any static file server pointed at the repository root.

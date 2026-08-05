@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="PORTAL — an ASCII arcade hub powered by figlet fonts." />
+  <title>PORTAL · ASCII Arcade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true">
+    <canvas id="field"></canvas>
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+  </div>
+
+  <header class="topbar">
+    <a class="brand-mark" href="#/" data-nav="hub" aria-label="PORTAL home">
+      <span class="brand-glyph">⌘</span>
+      <span class="brand-word">PORTAL</span>
+    </a>
+    <nav class="topnav" aria-label="Primary">
+      <a href="#/" data-nav="hub">Arcade</a>
+      <a href="#/fonts" data-nav="fonts">Fonts</a>
+    </nav>
+  </header>
+
+  <main id="app"></main>
+
+  <template id="tpl-hub">
+    <section class="hero" aria-label="PORTAL hero">
+      <div class="hero-copy">
+        <pre class="fig-title" id="hero-fig" aria-hidden="true"></pre>
+        <h1 class="sr-only">PORTAL</h1>
+        <p class="hero-lede">An ASCII arcade built on this figlet font collection. Pick a cabinet and play.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#/play/snake">Enter arcade</a>
+          <a class="btn btn-ghost" href="#/fonts">Browse fonts</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="cabinets" aria-labelledby="cabinets-heading">
+      <div class="section-head">
+        <h2 id="cabinets-heading">Cabinets</h2>
+        <p>Three short games. Keyboard or touch. High scores stay on this device.</p>
+      </div>
+      <div class="cabinet-grid">
+        <a class="cabinet" href="#/play/snake" data-game="snake">
+          <div class="cabinet-screen" aria-hidden="true">
+            <canvas class="cabinet-preview" data-preview="snake" width="320" height="180"></canvas>
+          </div>
+          <div class="cabinet-meta">
+            <h3>Neon Serpent</h3>
+            <p>Grow the snake. Don't bite the walls — or yourself.</p>
+            <span class="play-chip">Play</span>
+          </div>
+        </a>
+        <a class="cabinet" href="#/play/breakout" data-game="breakout">
+          <div class="cabinet-screen" aria-hidden="true">
+            <canvas class="cabinet-preview" data-preview="breakout" width="320" height="180"></canvas>
+          </div>
+          <div class="cabinet-meta">
+            <h3>Brick Signal</h3>
+            <p>Break the grid. Keep the phosphor ball in play.</p>
+            <span class="play-chip">Play</span>
+          </div>
+        </a>
+        <a class="cabinet" href="#/play/memory" data-game="memory">
+          <div class="cabinet-screen" aria-hidden="true">
+            <canvas class="cabinet-preview" data-preview="memory" width="320" height="180"></canvas>
+          </div>
+          <div class="cabinet-meta">
+            <h3>Glyph Match</h3>
+            <p>Flip pairs of ASCII glyphs. Clear the board fast.</p>
+            <span class="play-chip">Play</span>
+          </div>
+        </a>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-play">
+    <section class="play-stage">
+      <div class="play-chrome">
+        <a class="back-link" href="#/" data-nav="hub">← Arcade</a>
+        <div class="play-stats">
+          <div class="stat"><span class="stat-label">Score</span><span class="stat-value" id="score">0</span></div>
+          <div class="stat"><span class="stat-label">Best</span><span class="stat-value" id="best">0</span></div>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-restart">Restart</button>
+      </div>
+      <div class="play-frame">
+        <h2 class="play-title" id="play-title"></h2>
+        <p class="play-help" id="play-help"></p>
+        <div id="game-root" class="game-root"></div>
+        <p class="play-status" id="play-status" role="status"></p>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-fonts">
+    <section class="fonts-stage">
+      <div class="section-head">
+        <h2>Font signal</h2>
+        <p>Live figlet previews from the fonts in this repo. Type below to re-render.</p>
+      </div>
+      <form class="font-controls" id="font-form">
+        <label class="field">
+          <span>Text</span>
+          <input type="text" id="font-text" value="PORTAL" maxlength="24" autocomplete="off" />
+        </label>
+        <label class="field">
+          <span>Font</span>
+          <select id="font-select"></select>
+        </label>
+      </form>
+      <pre class="font-preview" id="font-preview" aria-live="polite"></pre>
+    </section>
+  </template>
+
+  <script src="https://cdn.jsdelivr.net/npm/figlet@1.8.1/lib/figlet.min.js"></script>
+  <script src="games/snake.js"></script>
+  <script src="games/breakout.js"></script>
+  <script src="games/memory.js"></script>
+  <script src="atmosphere.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
