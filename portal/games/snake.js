@@ -11,7 +11,7 @@ window.PortalGames.snake = function createSnake(root, api) {
   const ctx = canvas.getContext("2d");
 
   let snake = [{ x: 10, y: 10 }];
-  let dir = { x: 1, y: 0 };
+  let dir = { x: 0, y: 0 };
   let pending = null;
   let food = spawnFood();
   let score = 0;
@@ -80,10 +80,12 @@ window.PortalGames.snake = function createSnake(root, api) {
   function tick() {
     if (!alive || !started) return;
     if (pending) {
-      // prevent instant reverse
-      if (pending.x !== -dir.x || pending.y !== -dir.y) dir = pending;
+      const isReverse = pending.x === -dir.x && pending.y === -dir.y;
+      const isMoving = dir.x !== 0 || dir.y !== 0;
+      if (!isMoving || !isReverse) dir = pending;
       pending = null;
     }
+    if (!dir.x && !dir.y) return;
     const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
     if (
       head.x < 0 ||
