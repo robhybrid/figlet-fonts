@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portal Chambers — a Portal-inspired tribute</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="hud">
+      <div id="crosshair"></div>
+      <div id="portal-indicators">
+        <span class="pip blue" id="pip-blue" title="Blue portal"></span>
+        <span class="pip orange" id="pip-orange" title="Orange portal"></span>
+      </div>
+      <div id="chamber-label">Chamber 00</div>
+      <div id="hint"></div>
+    </div>
+
+    <div id="overlay" class="screen">
+      <div class="panel">
+        <p class="eyebrow">Aperture tribute · fan-made</p>
+        <h1>PORTAL<br />CHAMBERS</h1>
+        <p class="lede">
+          Place two linked portals. Conserve momentum. Reach the elevator.
+        </p>
+        <ul class="controls">
+          <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</li>
+          <li><kbd>Space</kbd> jump · <kbd>E</kbd> grab / drop cube</li>
+          <li><span class="mouse">LMB</span> blue portal · <span class="mouse">RMB</span> orange</li>
+          <li><kbd>R</kbd> reset chamber · <kbd>Esc</kbd> release mouse</li>
+        </ul>
+        <button id="start-btn" type="button">Begin testing</button>
+        <p class="fine">
+          Homage to Valve’s Portal — not affiliated with or endorsed by Valve.
+        </p>
+      </div>
+    </div>
+
+    <div id="complete" class="screen hidden">
+      <div class="panel">
+        <p class="eyebrow">Chamber complete</p>
+        <h2 id="complete-title">Nice shot</h2>
+        <p id="complete-body" class="lede"></p>
+        <button id="next-btn" type="button">Next chamber</button>
+      </div>
+    </div>
+
+    <div id="win" class="screen hidden">
+      <div class="panel">
+        <p class="eyebrow">Facility escaped</p>
+        <h2>Cake is a lie</h2>
+        <p class="lede">
+          You cleared every chamber. Thanks for playing this browser tribute.
+        </p>
+        <button id="replay-btn" type="button">Run it again</button>
+      </div>
+    </div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

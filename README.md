@@ -115,6 +115,19 @@ A [GitHub Actions workflow](.github/workflows/regenerate-examples.yml) runs this
 
 ---
 
+## Portal Chambers
+
+Browser homage to Valve’s Portal (fan-made, unaffiliated):
+
+```bash
+npm run portal-game
+# open http://localhost:4174/portal-game/
+```
+
+See [portal-game/README.md](portal-game/README.md).
+
+---
+
 ## Sources & Attribution
 
 | Source                                                                  | Fonts | Notes                                                                                                                                                                                                                                                                                                                |

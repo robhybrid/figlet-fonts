@@ -1,0 +1,255 @@
+:root {
+  --bg: #0c1014;
+  --panel: #141a21;
+  --ink: #e8eef4;
+  --muted: #8a97a5;
+  --blue: #4aa8ff;
+  --orange: #ff7a29;
+  --line: rgba(232, 238, 244, 0.12);
+  --accent: #c8f542;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+#crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 1.5px solid rgba(232, 238, 244, 0.85);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+#crosshair::before,
+#crosshair::after {
+  content: "";
+  position: absolute;
+  background: rgba(232, 238, 244, 0.85);
+}
+
+#crosshair::before {
+  left: 50%;
+  top: -6px;
+  width: 1.5px;
+  height: 26px;
+  margin-left: -0.75px;
+}
+
+#crosshair::after {
+  top: 50%;
+  left: -6px;
+  height: 1.5px;
+  width: 26px;
+  margin-top: -0.75px;
+}
+
+#portal-indicators {
+  position: absolute;
+  left: 50%;
+  bottom: 2.5rem;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.75rem;
+}
+
+.pip {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  opacity: 0.35;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pip.blue {
+  background: var(--blue);
+}
+
+.pip.orange {
+  background: var(--orange);
+}
+
+.pip.on {
+  opacity: 1;
+  box-shadow: 0 0 12px currentColor;
+}
+
+.pip.blue.on {
+  color: var(--blue);
+}
+
+.pip.orange.on {
+  color: var(--orange);
+}
+
+#chamber-label {
+  position: absolute;
+  top: 1.25rem;
+  left: 1.25rem;
+  font-family: Orbitron, sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+#hint {
+  position: absolute;
+  left: 50%;
+  top: 18%;
+  transform: translateX(-50%);
+  max-width: min(36rem, 90vw);
+  text-align: center;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--ink);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.75);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+#hint.show {
+  opacity: 1;
+}
+
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(74, 168, 255, 0.18), transparent 45%),
+    radial-gradient(ellipse at 75% 80%, rgba(255, 122, 41, 0.16), transparent 40%),
+    linear-gradient(160deg, #0a0e12 0%, #151c24 55%, #0c1014 100%);
+}
+
+.screen.hidden {
+  display: none;
+}
+
+.panel {
+  width: min(34rem, 92vw);
+  padding: 2.5rem 2rem;
+  border: 1px solid var(--line);
+  background: rgba(20, 26, 33, 0.88);
+  backdrop-filter: blur(10px);
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+h1,
+h2 {
+  margin: 0 0 1rem;
+  font-family: Orbitron, sans-serif;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+}
+
+h1 {
+  font-size: clamp(2.4rem, 8vw, 3.6rem);
+}
+
+h2 {
+  font-size: clamp(1.8rem, 5vw, 2.4rem);
+}
+
+.lede {
+  margin: 0 0 1.5rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.controls {
+  margin: 0 0 1.75rem;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.55rem;
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+kbd,
+.mouse {
+  display: inline-block;
+  min-width: 1.5rem;
+  padding: 0.12rem 0.4rem;
+  margin-right: 0.2rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+button {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0.85rem 1.4rem;
+  font-family: Orbitron, sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0c1014;
+  background: linear-gradient(90deg, var(--blue), var(--orange));
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+button:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.fine {
+  margin: 1.25rem 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: 1.75rem 1.25rem;
+  }
+
+  #portal-indicators {
+    bottom: 1.25rem;
+  }
+}
