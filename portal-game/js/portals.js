@@ -246,9 +246,14 @@ export class PortalPair {
     const local = from.group.worldToLocal(player.position.clone());
     local.applyQuaternion(flipY);
     // exit on the room-facing side (-Z)
-    local.z = Math.min(local.z, 0) - 0.75;
+    local.z = -0.85;
+    // keep modest lateral offset so you don't clip the rim
+    local.x *= 0.5;
+    local.y = THREE.MathUtils.clamp(local.y, -portalHalfY(to), portalHalfY(to));
 
     player.position.copy(to.group.localToWorld(local));
+    // extra safety push into the room along portal normal
+    player.position.addScaledVector(to.normal, 0.35);
 
     const fromInv = fromQ.clone().invert();
     const localVel = player.velocity.clone().applyQuaternion(fromInv);

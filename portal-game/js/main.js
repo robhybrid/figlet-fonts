@@ -20,12 +20,12 @@ const completeBody = document.getElementById("complete-body");
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
-renderer.setClearColor(0x0c1014);
+renderer.setClearColor(0xb8c4d0);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 canvasHost.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x0c1014, 18, 55);
+scene.fog = new THREE.Fog(0xb0bcc8, 40, 90);
 
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.08, 120);
 const player = new Player(camera, scene);
@@ -45,15 +45,17 @@ let hintTimer = 0;
 let completed = false;
 let pointerLocked = false;
 
-const ambient = new THREE.AmbientLight(0x9aabbc, 0.55);
+const ambient = new THREE.AmbientLight(0xc5d0dc, 1.1);
 scene.add(ambient);
-const sun = new THREE.DirectionalLight(0xffffff, 0.85);
+const sun = new THREE.DirectionalLight(0xffffff, 1.4);
 sun.position.set(8, 18, 6);
 scene.add(sun);
-const fill = new THREE.PointLight(0x4aa8ff, 0.35, 40);
+const hemi = new THREE.HemisphereLight(0xb8c8d8, 0x3a4048, 0.65);
+scene.add(hemi);
+const fill = new THREE.PointLight(0x4aa8ff, 0.55, 50);
 fill.position.set(-6, 6, 4);
 scene.add(fill);
-const fill2 = new THREE.PointLight(0xff7a29, 0.25, 40);
+const fill2 = new THREE.PointLight(0xff7a29, 0.45, 50);
 fill2.position.set(6, 5, -4);
 scene.add(fill2);
 
@@ -91,10 +93,8 @@ function clearLevel() {
 
 function addWall(def) {
   const geo = new THREE.BoxGeometry(def.size[0], def.size[1], def.size[2]);
-  const mat = new THREE.MeshStandardMaterial({
-    color: def.color ?? 0x343e4a,
-    roughness: 0.82,
-    metalness: 0.08,
+  const mat = new THREE.MeshLambertMaterial({
+    color: def.color ?? 0x8a96a2,
   });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(...def.pos);
@@ -142,12 +142,9 @@ function loadLevel(index) {
   for (const c of level.cubes || []) {
     const size = c.size ?? 1.1;
     const geo = new THREE.BoxGeometry(size, size, size);
-    const mat = new THREE.MeshStandardMaterial({
+    const mat = new THREE.MeshLambertMaterial({
       color: 0xd4c4a8,
-      roughness: 0.55,
-      metalness: 0.15,
-      emissive: 0x2a2010,
-      emissiveIntensity: 0.15,
+      emissive: 0x3a3020,
     });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(...c.pos);
@@ -170,10 +167,8 @@ function loadLevel(index) {
 
   for (const b of level.buttons || []) {
     const geo = new THREE.BoxGeometry(b.size[0], b.size[1], b.size[2]);
-    const mat = new THREE.MeshStandardMaterial({
+    const mat = new THREE.MeshLambertMaterial({
       color: 0x888890,
-      roughness: 0.4,
-      metalness: 0.4,
       emissive: 0x222222,
     });
     const mesh = new THREE.Mesh(geo, mat);
@@ -184,10 +179,9 @@ function loadLevel(index) {
 
   for (const d of level.doors || []) {
     const geo = new THREE.BoxGeometry(d.size[0], d.size[1], d.size[2]);
-    const mat = new THREE.MeshStandardMaterial({
+    const mat = new THREE.MeshLambertMaterial({
       color: 0x6a7380,
-      roughness: 0.5,
-      metalness: 0.35,
+      emissive: 0x1a2028,
     });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(...d.pos);
@@ -210,11 +204,9 @@ function loadLevel(index) {
 
   // exit elevator pad
   const eg = new THREE.BoxGeometry(...level.exit.size);
-  const em = new THREE.MeshStandardMaterial({
+  const em = new THREE.MeshLambertMaterial({
     color: 0xc8f542,
     emissive: 0x6a8a20,
-    emissiveIntensity: 0.6,
-    roughness: 0.35,
   });
   exitMesh = new THREE.Mesh(eg, em);
   exitMesh.position.set(...level.exit.pos);
