@@ -336,6 +336,7 @@ export class PortalPair {
 }
 
 export function firePortalRay(camera, colliders, maxDist = 60) {
+  camera.updateMatrixWorld(true);
   const raycaster = new THREE.Raycaster();
   raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
   raycaster.far = maxDist;

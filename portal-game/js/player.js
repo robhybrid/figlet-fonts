@@ -52,6 +52,7 @@ export class Player {
     this.camera.rotation.order = "YXZ";
     this.camera.rotation.y = this.yaw;
     this.camera.rotation.x = this.pitch;
+    this.camera.updateMatrixWorld(true);
   }
 
   look(dx, dy) {

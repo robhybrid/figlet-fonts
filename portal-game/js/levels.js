@@ -4,9 +4,9 @@ export const LEVELS = [
   {
     id: 0,
     name: "Chamber 00",
-    hint: "Left click places a blue portal. Right click places orange. Walk through.",
+    hint: "Place blue and orange on two walls, then walk into one.",
     spawn: [0, 1.6, 8],
-    yaw: Math.PI,
+    yaw: Math.PI / 2,
     bounds: { min: [-12, -1, -14], max: [12, 10, 14] },
     walls: [
       // floor / ceiling

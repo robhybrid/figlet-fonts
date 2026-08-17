@@ -260,14 +260,19 @@ function updatePips() {
 }
 
 function placePortal(color) {
+  camera.updateMatrixWorld(true);
   const hit = firePortalRay(camera, colliderMeta);
-  if (!hit) return;
+  if (!hit) {
+    showHint("No surface in range.", 1.2);
+    return;
+  }
   const meta = colliderMeta.find((c) => c.mesh === hit.object);
   if (!meta || !meta.portalable) {
     showHint("Can't place a portal there.", 1.5);
     return;
   }
-  portals.place(color, hit.point, hit.face.normal.clone().transformDirection(hit.object.matrixWorld), meta.box);
+  const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+  portals.place(color, hit.point, n, meta.box);
   updatePips();
 }
 
@@ -464,7 +469,7 @@ function beginChamber(index) {
   winScreen.classList.add("hidden");
   loadLevel(index);
   setPlaying(true);
-  if (!useTouch) lockPointer();
+  if (!useTouch && !new URLSearchParams(location.search).has("autotest")) lockPointer();
 }
 
 const touch = new TouchControls({
@@ -563,3 +568,41 @@ function tick() {
 loadLevel(0);
 player.enabled = false;
 tick();
+
+window.__pc = {
+  player,
+  portals,
+  placePortal,
+  getPos: () => [player.position.x, player.position.y, player.position.z],
+};
+
+if (new URLSearchParams(location.search).has("autotest")) {
+  const log = (msg, extra) => {
+    console.log("[autotest]", msg, extra ?? "");
+    showHint(String(msg), 8);
+  };
+  setTimeout(() => {
+    beginChamber(0);
+    const left = colliderMeta.find(
+      (c) => c.portalable && Math.abs(c.mesh.position.x + 12) < 0.2 && c.mesh.position.z === 0
+    );
+    const right = colliderMeta.find(
+      (c) => c.portalable && Math.abs(c.mesh.position.x - 12) < 0.2 && c.mesh.position.z === 0
+    );
+    const okL = left && portals.place("blue", new THREE.Vector3(-11.45, 1.6, 8), new THREE.Vector3(1, 0, 0), left.box);
+    const okR = right && portals.place("orange", new THREE.Vector3(11.45, 1.6, 8), new THREE.Vector3(-1, 0, 0), right.box);
+    updatePips();
+    player.yaw = Math.PI / 2;
+    player._syncCamera();
+    const before = window.__pc.getPos().slice();
+    log(`direct place L=${!!okL} R=${!!okR} both=${portals.bothReady()} pos=${before.map((n) => n.toFixed(2))}`);
+    player.keys.add("KeyW");
+    setTimeout(() => {
+      player.keys.delete("KeyW");
+      const after = window.__pc.getPos();
+      const jumped = after[0] > 4;
+      log(`after=${after.map((n) => n.toFixed(2))} teleported=${jumped}`);
+      document.title = jumped ? "AUTOTEST PASS" : "AUTOTEST FAIL";
+    }, 1800);
+  }, 400);
+}
