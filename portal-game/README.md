@@ -47,5 +47,10 @@ On-screen controls appear automatically on touch devices (no mouse capture neede
 3. **02** — Cube on a button opens the door
 4. **03** — Portal the cube into a sealed room
 5. **04** — Tall fling to the high exit
+6. **05** — Portal across a goo-filled gap
+7. **06** — Retrieve the cube from a high shelf
+8. **07** — Two cubes, two buttons
+9. **08** — Shoot through a window
+10. **09** — Fling across a trench
 
-Portals only stick to lighter paneled surfaces. Dark / striped walls are non-portalable.
+Portals only stick to lighter paneled surfaces. Dark / striped walls are non-portalable. Orange goo resets the chamber.

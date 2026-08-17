@@ -41,6 +41,7 @@ let buttons = [];
 let doors = [];
 let exitMesh = null;
 let doorOpen = new Set();
+let hazards = [];
 let clock = new THREE.Clock();
 let hintTimer = 0;
 let completed = false;
@@ -93,6 +94,7 @@ function clearLevel() {
   doorOpen = new Set();
   player.held = null;
   completed = false;
+  hazards = [];
 }
 
 function addWall(def) {
@@ -204,6 +206,19 @@ function loadLevel(index) {
     });
     solidBoxes.push(box);
     colliderMeta.push({ box, mesh, portalable: false, kind: "door", doorId: d.id });
+  }
+
+  for (const h of level.hazards || []) {
+    const geo = new THREE.BoxGeometry(h.size[0], h.size[1], h.size[2]);
+    const mat = new THREE.MeshLambertMaterial({
+      color: 0xc45c1a,
+      emissive: 0x4a1808,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(...h.pos);
+    levelRoot.add(mesh);
+    const half = new THREE.Vector3(h.size[0] / 2, h.size[1] / 2, h.size[2] / 2);
+    hazards.push(new THREE.Box3(mesh.position.clone().sub(half), mesh.position.clone().add(half)));
   }
 
   // exit elevator pad
@@ -397,9 +412,16 @@ function updateButtonsAndDoors(dt) {
     b.mesh.material.emissive.setHex(pressed ? 0x2a6a20 : 0x222222);
     b.mesh.material.color.setHex(pressed ? 0x6adf4a : 0x888890);
     b.mesh.position.y = b.baseY - (pressed ? 0.05 : 0);
+  }
 
-    if (pressed) doorOpen.add(b.opens);
-    else doorOpen.delete(b.opens);
+  doorOpen.clear();
+  const needed = {};
+  for (const b of buttons) {
+    if (!needed[b.opens]) needed[b.opens] = [];
+    needed[b.opens].push(b.pressed);
+  }
+  for (const [id, states] of Object.entries(needed)) {
+    if (states.length && states.every(Boolean)) doorOpen.add(id);
   }
 
   for (const d of doors) {
@@ -545,6 +567,14 @@ function tick() {
     updateCubes(dt);
     updateButtonsAndDoors(dt);
     checkExit();
+
+    const body = player._bodyBox();
+    if (hazards.some((h) => body.intersectsBox(h))) {
+      loadLevel(levelIndex);
+      setPlaying(true);
+      showHint("The enrichment center reminds you that goo is not a toy.", 3);
+      return;
+    }
 
     // out of bounds reset
     const level = LEVELS[levelIndex];
