@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { LEVELS } from "./levels.js";
 import { Player } from "./player.js";
 import { PortalPair, firePortalRay } from "./portals.js";
+import { TouchControls, prefersTouchControls } from "./touch.js";
 
 const canvasHost = document.body;
 const overlay = document.getElementById("overlay");
@@ -44,6 +45,9 @@ let clock = new THREE.Clock();
 let hintTimer = 0;
 let completed = false;
 let pointerLocked = false;
+const useTouch = prefersTouchControls();
+if (useTouch) document.body.classList.add("prefer-touch");
+if (useTouch) renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 
 const ambient = new THREE.AmbientLight(0xc5d0dc, 1.1);
 scene.add(ambient);
@@ -419,7 +423,7 @@ function checkExit() {
   const dist = player.position.distanceTo(exitMesh.position);
   if (dist < 1.4) {
     completed = true;
-    player.enabled = false;
+    setPlaying(false);
     document.exitPointerLock?.();
     if (levelIndex >= LEVELS.length - 1) {
       winScreen.classList.remove("hidden");
@@ -441,48 +445,74 @@ function onResize() {
 }
 
 function lockPointer() {
-  renderer.domElement.requestPointerLock();
+  renderer.domElement.requestPointerLock?.();
 }
 
-startBtn.addEventListener("click", () => {
+function playEnabled() {
+  return (
+    !completed &&
+    overlay.classList.contains("hidden") &&
+    completeScreen.classList.contains("hidden") &&
+    winScreen.classList.contains("hidden")
+  );
+}
+
+function setPlaying(on) {
+  player.enabled = on && playEnabled();
+  if (on && useTouch && playEnabled()) touch.show();
+  else touch.hide();
+}
+
+function beginChamber(index) {
   overlay.classList.add("hidden");
-  loadLevel(0);
-  player.enabled = true;
-  lockPointer();
-});
-
-nextBtn.addEventListener("click", () => {
   completeScreen.classList.add("hidden");
-  loadLevel(levelIndex + 1);
-  player.enabled = true;
-  lockPointer();
+  winScreen.classList.add("hidden");
+  loadLevel(index);
+  setPlaying(true);
+  if (!useTouch) lockPointer();
+}
+
+const touch = new TouchControls({
+  player,
+  onBlue: () => {
+    if (player.enabled) placePortal("blue");
+  },
+  onOrange: () => {
+    if (player.enabled) placePortal("orange");
+  },
+  onGrab: () => {
+    if (player.enabled) tryGrabOrDrop();
+  },
+  onJump: () => {},
+  onReset: () => {
+    if (!playEnabled()) return;
+    loadLevel(levelIndex);
+    setPlaying(true);
+  },
 });
 
-replayBtn.addEventListener("click", () => {
-  winScreen.classList.add("hidden");
-  loadLevel(0);
-  player.enabled = true;
-  lockPointer();
-});
+startBtn.addEventListener("click", () => beginChamber(0));
+nextBtn.addEventListener("click", () => beginChamber(levelIndex + 1));
+replayBtn.addEventListener("click", () => beginChamber(0));
 
 document.addEventListener("pointerlockchange", () => {
   pointerLocked = document.pointerLockElement === renderer.domElement;
-  player.enabled = pointerLocked && !completed && overlay.classList.contains("hidden");
+  if (useTouch) return;
+  player.enabled = pointerLocked && playEnabled();
 });
 
 document.addEventListener("mousemove", (e) => {
-  if (!pointerLocked) return;
+  if (!pointerLocked || useTouch) return;
   player.look(e.movementX, e.movementY);
 });
 
 renderer.domElement.addEventListener("click", () => {
-  if (overlay.classList.contains("hidden") && !pointerLocked && !completed) {
-    lockPointer();
-  }
+  if (useTouch) return;
+  if (playEnabled() && !pointerLocked) lockPointer();
 });
 
 renderer.domElement.addEventListener("mousedown", (e) => {
-  if (!player.enabled) return;
+  if (useTouch || !player.enabled) return;
   if (e.button === 0) placePortal("blue");
   if (e.button === 2) placePortal("orange");
 });
@@ -491,13 +521,14 @@ renderer.domElement.addEventListener("contextmenu", (e) => e.preventDefault());
 
 window.addEventListener("keydown", (e) => {
   if (e.code === "KeyE" && player.enabled) tryGrabOrDrop();
-  if (e.code === "KeyR" && overlay.classList.contains("hidden") && !completed) {
+  if (e.code === "KeyR" && playEnabled()) {
     loadLevel(levelIndex);
-    player.enabled = pointerLocked;
+    setPlaying(true);
   }
 });
 
 window.addEventListener("resize", onResize);
+window.visualViewport?.addEventListener("resize", onResize);
 
 function tick() {
   requestAnimationFrame(tick);
@@ -525,7 +556,7 @@ function tick() {
       player.position.x > b.max[0] + 2
     ) {
       loadLevel(levelIndex);
-      player.enabled = pointerLocked;
+      setPlaying(true);
     }
   }
 

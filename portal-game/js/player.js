@@ -24,6 +24,8 @@ export class Player {
     this.eye = EYE;
     this.held = null;
     this.portalCooldown = 0;
+    this.moveAxis = { x: 0, z: 0 };
+    this.jumpHeld = false;
     this._bind();
   }
 
@@ -71,18 +73,25 @@ export class Player {
 
     const forward = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+    const analog = Math.min(1, Math.hypot(this.moveAxis.x, this.moveAxis.z));
     const wish = new THREE.Vector3();
     if (this.keys.has("KeyW") || this.keys.has("ArrowUp")) wish.add(forward);
     if (this.keys.has("KeyS") || this.keys.has("ArrowDown")) wish.sub(forward);
     if (this.keys.has("KeyD") || this.keys.has("ArrowRight")) wish.add(right);
     if (this.keys.has("KeyA") || this.keys.has("ArrowLeft")) wish.sub(right);
+    if (analog > 0.04) {
+      wish.addScaledVector(forward, this.moveAxis.z);
+      wish.addScaledVector(right, this.moveAxis.x);
+    }
     if (wish.lengthSq() > 0) wish.normalize();
 
-    const speed = MOVE_SPEED * (this.keys.has("ShiftLeft") ? SPRINT : 1);
+    const speed =
+      MOVE_SPEED *
+      (this.keys.has("ShiftLeft") ? SPRINT : analog > 0.04 ? Math.max(0.4, analog) : 1);
     this.velocity.x = wish.x * speed;
     this.velocity.z = wish.z * speed;
 
-    if (this.onGround && this.keys.has("Space")) {
+    if (this.onGround && (this.keys.has("Space") || this.jumpHeld)) {
       this.velocity.y = JUMP;
       this.onGround = false;
     }

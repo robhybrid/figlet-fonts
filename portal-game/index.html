@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Portal Chambers — a Portal-inspired tribute</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -31,11 +34,17 @@
         <p class="lede">
           Place two linked portals. Conserve momentum. Reach the elevator.
         </p>
-        <ul class="controls">
+        <ul class="controls" id="controls-desktop">
           <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</li>
           <li><kbd>Space</kbd> jump · <kbd>E</kbd> grab / drop cube</li>
           <li><span class="mouse">LMB</span> blue portal · <span class="mouse">RMB</span> orange</li>
           <li><kbd>R</kbd> reset chamber · <kbd>Esc</kbd> release mouse</li>
+        </ul>
+        <ul class="controls" id="controls-mobile">
+          <li>Left stick — move</li>
+          <li>Drag right side — look</li>
+          <li>Blue / Orange — fire portals</li>
+          <li>Jump · Grab cube · Reset</li>
         </ul>
         <button id="start-btn" type="button">Begin testing</button>
         <p class="fine">
@@ -61,6 +70,22 @@
           You cleared every chamber. Thanks for playing this browser tribute.
         </p>
         <button id="replay-btn" type="button">Run it again</button>
+      </div>
+    </div>
+
+    <div id="touch-controls" class="hidden" aria-hidden="true">
+      <div id="touch-move">
+        <div id="touch-stick">
+          <div id="touch-knob"></div>
+        </div>
+      </div>
+      <div id="touch-look"></div>
+      <div id="touch-actions">
+        <button type="button" class="touch-btn portal-btn blue" id="touch-blue">Blue</button>
+        <button type="button" class="touch-btn portal-btn orange" id="touch-orange">Orange</button>
+        <button type="button" class="touch-btn" id="touch-grab">Grab</button>
+        <button type="button" class="touch-btn jump" id="touch-jump">Jump</button>
+        <button type="button" class="touch-btn ghost" id="touch-reset">Reset</button>
       </div>
     </div>
 

@@ -27,6 +27,19 @@ Open [http://localhost:4174/portal-game/](http://localhost:4174/portal-game/).
 | `R` | Reset chamber |
 | `Esc` | Release mouse |
 
+### Phone / tablet
+
+On-screen controls appear automatically on touch devices (no mouse capture needed):
+
+| Input | Action |
+| --- | --- |
+| Left stick | Move |
+| Drag on the right side | Look |
+| **Blue** / **Orange** | Fire portals |
+| **Jump** | Jump |
+| **Grab** | Pick up / drop cube |
+| **Reset** | Restart the chamber |
+
 ## Chambers
 
 1. **00** — Place linked portals and walk through

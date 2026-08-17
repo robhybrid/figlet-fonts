@@ -21,6 +21,10 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: "Share Tech Mono", ui-monospace, monospace;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 canvas {
@@ -146,6 +150,9 @@ canvas {
   z-index: 10;
   display: grid;
   place-items: center;
+  touch-action: auto;
+  -webkit-user-select: auto;
+  user-select: auto;
   background:
     radial-gradient(ellipse at 30% 20%, rgba(74, 168, 255, 0.18), transparent 45%),
     radial-gradient(ellipse at 75% 80%, rgba(255, 122, 41, 0.16), transparent 40%),
@@ -223,6 +230,7 @@ button {
   border: 0;
   cursor: pointer;
   padding: 0.85rem 1.4rem;
+  min-height: 3rem;
   font-family: Orbitron, sans-serif;
   font-size: 0.85rem;
   letter-spacing: 0.08em;
@@ -230,6 +238,7 @@ button {
   color: #0c1014;
   background: linear-gradient(90deg, var(--blue), var(--orange));
   transition: filter 0.15s ease, transform 0.15s ease;
+  touch-action: manipulation;
 }
 
 button:hover {
@@ -246,10 +255,182 @@ button:hover {
 
 @media (max-width: 640px) {
   .panel {
-    padding: 1.75rem 1.25rem;
+    padding: 1.5rem 1.15rem;
+    max-height: min(92dvh, 92vh);
+    overflow: auto;
+  }
+
+  h1 {
+    font-size: clamp(1.8rem, 10vw, 2.6rem);
   }
 
   #portal-indicators {
-    bottom: 1.25rem;
+    bottom: calc(11.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  #hint {
+    top: 12%;
+    font-size: 0.85rem;
+  }
+
+  #chamber-label {
+    top: calc(0.75rem + env(safe-area-inset-top, 0px));
+    left: 0.85rem;
+  }
+}
+
+#controls-mobile {
+  display: none;
+}
+
+body.touch-ui #controls-desktop,
+body.prefer-touch #controls-desktop {
+  display: none;
+}
+
+body.touch-ui #controls-mobile,
+body.prefer-touch #controls-mobile {
+  display: grid;
+}
+
+#touch-controls {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+#touch-controls.hidden {
+  display: none;
+}
+
+#touch-move {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 46%;
+  height: 48%;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+#touch-stick {
+  position: absolute;
+  left: calc(1.4rem + env(safe-area-inset-left, 0px));
+  bottom: calc(1.4rem + env(safe-area-inset-bottom, 0px));
+  width: 7.4rem;
+  height: 7.4rem;
+  border-radius: 50%;
+  border: 2px solid rgba(232, 238, 244, 0.28);
+  background: rgba(12, 16, 20, 0.35);
+}
+
+#touch-stick.active {
+  border-color: rgba(74, 168, 255, 0.7);
+}
+
+#touch-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2.7rem;
+  height: 2.7rem;
+  margin: -1.35rem 0 0 -1.35rem;
+  border-radius: 50%;
+  background: rgba(232, 238, 244, 0.78);
+  box-shadow: 0 0 12px rgba(74, 168, 255, 0.35);
+  will-change: transform;
+}
+
+#touch-look {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 58%;
+  height: 100%;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+#touch-actions {
+  position: absolute;
+  right: calc(0.7rem + env(safe-area-inset-right, 0px));
+  bottom: calc(0.9rem + env(safe-area-inset-bottom, 0px));
+  display: grid;
+  grid-template-columns: 4.2rem 4.2rem;
+  grid-template-areas:
+    "reset grab"
+    "blue orange"
+    "jump jump";
+  gap: 0.55rem;
+  pointer-events: auto;
+  z-index: 7;
+}
+
+.touch-btn {
+  appearance: none;
+  border: 1px solid rgba(232, 238, 244, 0.22);
+  border-radius: 999px;
+  min-height: 3.1rem;
+  padding: 0.45rem 0.35rem;
+  font-family: Orbitron, sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: rgba(20, 26, 33, 0.72);
+  backdrop-filter: blur(8px);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.touch-btn.held,
+.touch-btn:active {
+  filter: brightness(1.2);
+  transform: scale(0.96);
+}
+
+.touch-btn.portal-btn.blue {
+  grid-area: blue;
+  background: rgba(74, 168, 255, 0.88);
+  color: #0c1014;
+}
+
+.touch-btn.portal-btn.orange {
+  grid-area: orange;
+  background: rgba(255, 122, 41, 0.9);
+  color: #0c1014;
+}
+
+.touch-btn.jump {
+  grid-area: jump;
+  min-height: 3.4rem;
+  background: rgba(200, 245, 66, 0.88);
+  color: #0c1014;
+}
+
+.touch-btn.ghost {
+  grid-area: reset;
+  opacity: 0.85;
+}
+
+#touch-grab {
+  grid-area: grab;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  #touch-stick {
+    width: 6.2rem;
+    height: 6.2rem;
+  }
+
+  .touch-btn {
+    min-height: 2.6rem;
+    font-size: 0.55rem;
+  }
+
+  #touch-actions {
+    grid-template-columns: 3.6rem 3.6rem;
   }
 }
