@@ -5,6 +5,10 @@ const ORANGE = 0xff7a29;
 const PORTAL_W = 1.6;
 const PORTAL_H = 2.4;
 
+function portalHalfY(portal) {
+  return portal.height * 0.4;
+}
+
 export class PortalPair {
   constructor(scene, renderer, mainCamera) {
     this.scene = scene;
@@ -41,10 +45,11 @@ export class PortalPair {
   }
 
   place(color, point, normal, surfaceBox) {
-    // snap slightly off the surface
+    // snap slightly off the surface, facing the camera / room
     const n = normal.clone().normalize();
-    // refuse near-degenerate placements (edge cases)
     if (n.lengthSq() < 0.5) return false;
+    const toCam = this.mainCamera.position.clone().sub(point);
+    if (n.dot(toCam) < 0) n.negate();
 
     const pos = point.clone().addScaledVector(n, 0.05);
     const group = this._makePortalMesh(color === "blue" ? BLUE : ORANGE, color);
@@ -208,32 +213,80 @@ export class PortalPair {
   }
 
   /**
-   * If player is close enough to a portal opening, teleport to the other.
-   * Returns true if teleported.
+   * Skip collision with a wall that currently has a portal opening around the entity.
    */
+  shouldIgnoreBox(box, entity) {
+    if (!this.bothReady() || !box) return false;
+    const ghost = this._ghostUntil && performance.now() < this._ghostUntil;
+    for (const p of [this.blue, this.orange]) {
+      if (p.surfaceBox !== box) continue;
+      for (const pt of this._bodySamples(entity)) {
+        const local = this._localPoint(p, pt);
+        if (this._inEllipse(local, p, 1.15) && Math.abs(local.z) < 1.6) return true;
+        if (ghost && this._inEllipse(local, p, 1.45) && Math.abs(local.z) < 2.2) return true;
+      }
+    }
+    return false;
+  }
+
   tryTravel(player) {
     if (!this.bothReady()) return false;
     for (const [entry, exit] of [
       [this.blue, this.orange],
       [this.orange, this.blue],
     ]) {
-      if (this._nearPortal(player.position, entry)) {
+      if (this._readyToCross(player, entry)) {
         this._teleport(player, entry, exit);
+        this._ghostUntil = performance.now() + 280;
         return true;
       }
     }
     return false;
   }
 
+  _bodySamples(entity) {
+    const pos = entity.position;
+    if (!pos) return [];
+    const points = [pos.clone()];
+    if (typeof entity.feetY === "function") {
+      const feet = entity.feetY();
+      const h = entity.height ?? 1.7;
+      points.push(new THREE.Vector3(pos.x, feet + 0.12, pos.z));
+      points.push(new THREE.Vector3(pos.x, feet + h * 0.5, pos.z));
+    } else if (entity.size) {
+      points.push(pos.clone().setY(pos.y - entity.size * 0.45));
+    }
+    return points;
+  }
+
+  _localPoint(portal, worldPos) {
+    portal.group.updateMatrixWorld(true);
+    return portal.group.worldToLocal(worldPos.clone());
+  }
+
+  _inEllipse(local, portal, scale = 0.9) {
+    const rx = (portal.width / 2) * scale;
+    const ry = (portal.height / 2) * scale;
+    return (local.x * local.x) / (rx * rx) + (local.y * local.y) / (ry * ry) <= 1;
+  }
+
+  _readyToCross(player, portal) {
+    let crossed = false;
+    for (const pt of this._bodySamples(player)) {
+      const local = this._localPoint(portal, pt);
+      if (!this._inEllipse(local, portal, 0.95)) continue;
+      const prev = portal._lastZ;
+      portal._lastZ = local.z;
+      // In the doorway, or just crossed from the room (negative local Z) through the plane
+      if (local.z > -1.05 && local.z < 0.55) return true;
+      if (prev != null && prev < -0.02 && local.z >= 0 && prev > -2.2) crossed = true;
+    }
+    return crossed;
+  }
+
   _nearPortal(pos, portal) {
-    const local = portal.group.worldToLocal(pos.clone());
-    const inEllipse =
-      (local.x * local.x) / ((portal.width * 0.55) ** 2) +
-        (local.y * local.y) / ((portal.height * 0.55) ** 2) <
-      1;
-    // lookAt faces room along -Z, so the playable side is negative local Z
-    const depth = local.z;
-    return inEllipse && depth > -0.65 && depth < 0.4;
+    const local = this._localPoint(portal, pos);
+    return this._inEllipse(local, portal, 0.95) && local.z > -1.05 && local.z < 0.55;
   }
 
   _teleport(player, from, to) {

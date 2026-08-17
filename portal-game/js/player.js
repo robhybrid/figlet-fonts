@@ -105,7 +105,7 @@ export class Player {
 
     if (tryPortalTravel && this.portalCooldown <= 0) {
       const traveled = tryPortalTravel(this);
-      if (traveled) this.portalCooldown = 0.35;
+      if (traveled) this.portalCooldown = 0.45;
     }
 
     this._syncCamera();

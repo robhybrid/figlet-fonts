@@ -227,7 +227,7 @@ function loadLevel(index) {
   showHint(level.hint, 6);
 }
 
-function collidersForPhysics() {
+function collidersForPhysics(entity) {
   // rebuild door boxes from current mesh positions
   const boxes = [];
   for (const meta of colliderMeta) {
@@ -236,11 +236,13 @@ function collidersForPhysics() {
       if (door && door.open && door.t > 0.85) continue; // fully open — no collision
       meta.box.setFromCenterAndSize(meta.mesh.position, new THREE.Vector3(...door.size));
     }
+    if (entity && portals.shouldIgnoreBox(meta.box, entity)) continue;
     boxes.push(meta.box);
   }
   // cube colliders when not held
   for (const c of cubes) {
     if (c.held) continue;
+    if (entity && entity.mesh && entity.mesh === c.mesh) continue;
     const half = c.size / 2;
     boxes.push(
       new THREE.Box3(
@@ -299,7 +301,7 @@ function tryGrabOrDrop() {
   }
 }
 
-function updateCubes(dt, boxes) {
+function updateCubes(dt) {
   for (const c of cubes) {
     if (c.held) {
       const hold = new THREE.Vector3(0, -0.15, -2.1).applyQuaternion(camera.quaternion);
@@ -307,6 +309,7 @@ function updateCubes(dt, boxes) {
       c.velocity.set(0, 0, 0);
       continue;
     }
+    const boxes = collidersForPhysics(c);
     c.velocity.y -= 28 * dt;
     // simple axis separation vs walls
     for (const axis of ["x", "z", "y"]) {
@@ -352,21 +355,13 @@ function updateCubes(dt, boxes) {
       const fake = {
         position: c.mesh.position,
         velocity: c.velocity,
+        size: c.size,
         camera: { quaternion: new THREE.Quaternion() },
         yaw: 0,
         pitch: 0,
         onGround: false,
       };
-      // reuse near check
-      for (const [entry, exit] of [
-        [portals.blue, portals.orange],
-        [portals.orange, portals.blue],
-      ]) {
-        if (portals._nearPortal(c.mesh.position, entry)) {
-          portals._teleport(fake, entry, exit);
-          break;
-        }
-      }
+      portals.tryTravel(fake);
     }
   }
 }
@@ -540,10 +535,9 @@ function tick() {
   }
 
   if (player.enabled) {
-    const boxes = collidersForPhysics();
-    // exclude held cube / dynamic from player collision — already handled
+    const boxes = collidersForPhysics(player);
     player.update(dt, boxes, (p) => portals.tryTravel(p));
-    updateCubes(dt, boxes.filter((b) => true));
+    updateCubes(dt);
     updateButtonsAndDoors(dt);
     checkExit();
 
