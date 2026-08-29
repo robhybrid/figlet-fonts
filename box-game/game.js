@@ -303,7 +303,8 @@ function updateMovement(dt) {
 
   rightDir.crossVectors(forwardDir, camera.up).normalize();
 
-  camera.position.addScaledVector(forwardDir, inputZ * speed * dt);
+  const forwardAmount = useTouchControls ? -inputZ : inputZ;
+  camera.position.addScaledVector(forwardDir, forwardAmount * speed * dt);
   camera.position.addScaledVector(rightDir, inputX * speed * dt);
 
   bobPhase += dt * (sprint ? 11 : 7.5);
