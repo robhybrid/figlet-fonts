@@ -68,12 +68,20 @@ body {
   display: none;
 }
 
-body.touch-device .desktop-hint {
+body.touch-controls .desktop-hint {
   display: none;
 }
 
-body.touch-device .mobile-hint {
+body.touch-controls .mobile-hint {
   display: block;
+}
+
+body.touch-controls #thoughts {
+  bottom: 7.5rem;
+}
+
+body.touch-controls #game {
+  cursor: default;
 }
 
 #enter-btn {
@@ -85,6 +93,7 @@ body.touch-device .mobile-hint {
   font: inherit;
   letter-spacing: 0.06em;
   cursor: pointer;
+  touch-action: manipulation;
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
@@ -131,7 +140,17 @@ body.touch-device .mobile-hint {
 #mobile-controls {
   position: fixed;
   inset: 0;
-  z-index: 6;
+  z-index: 20;
+  display: none;
+  pointer-events: none;
+  touch-action: none;
+}
+
+body.touch-controls.playing #mobile-controls {
+  display: block;
+}
+
+body.touch-controls.playing #game {
   pointer-events: none;
   touch-action: none;
 }
@@ -161,9 +180,10 @@ body.touch-device .mobile-hint {
   width: 9rem;
   height: 9rem;
   border-radius: 50%;
-  border: 1px solid rgba(232, 224, 212, 0.18);
-  background: rgba(18, 16, 14, 0.35);
+  border: 2px solid rgba(232, 224, 212, 0.35);
+  background: rgba(18, 16, 14, 0.55);
   position: relative;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 #joystick-stick {
@@ -174,9 +194,10 @@ body.touch-device .mobile-hint {
   height: 3.4rem;
   margin: -1.7rem 0 0 -1.7rem;
   border-radius: 50%;
-  border: 1px solid rgba(232, 224, 212, 0.28);
-  background: rgba(232, 224, 212, 0.12);
+  border: 2px solid rgba(232, 224, 212, 0.45);
+  background: rgba(232, 224, 212, 0.25);
   transition: transform 0.05s linear;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 #joystick-zone.active #joystick-stick {
@@ -197,11 +218,15 @@ body.touch-device .mobile-hint {
   right: 1rem;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  opacity: 0.25;
+  opacity: 0.45;
   pointer-events: none;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(232, 224, 212, 0.2);
+  border-radius: 999px;
+  background: rgba(18, 16, 14, 0.35);
 }
 
 #look-zone.active::after {
@@ -214,13 +239,14 @@ body.touch-device .mobile-hint {
   bottom: 1.25rem;
   min-width: 4.5rem;
   padding: 0.85rem 1.1rem;
-  border: 1px solid rgba(232, 224, 212, 0.28);
+  border: 2px solid rgba(232, 224, 212, 0.35);
   border-radius: 999px;
-  background: rgba(18, 16, 14, 0.45);
+  background: rgba(18, 16, 14, 0.65);
   color: inherit;
   font: inherit;
   letter-spacing: 0.06em;
   cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 #sprint-btn.active {
@@ -228,10 +254,12 @@ body.touch-device .mobile-hint {
   border-color: rgba(232, 224, 212, 0.45);
 }
 
-body.touch-device #thoughts {
-  bottom: 7.5rem;
-}
+@media (max-width: 900px), (pointer: coarse), (hover: none) {
+  .desktop-hint {
+    display: none;
+  }
 
-body.touch-device #game {
-  cursor: default;
+  .mobile-hint {
+    display: block;
+  }
 }

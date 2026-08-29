@@ -13,12 +13,30 @@ const joystickStick = document.getElementById("joystick-stick");
 const lookZone = document.getElementById("look-zone");
 const sprintBtn = document.getElementById("sprint-btn");
 
-const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
 const JOYSTICK_RADIUS = 52;
 const LOOK_SENSITIVITY = 0.004;
 const PI_2 = Math.PI / 2;
 
-if (isTouchDevice) document.body.classList.add("touch-device");
+function shouldUseTouchControls() {
+  const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+  const noHover = window.matchMedia("(hover: none)").matches;
+  const narrowScreen = window.matchMedia("(max-width: 900px)").matches;
+  const hasTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+  return coarsePointer || noHover || isIOS || (hasTouch && narrowScreen);
+}
+
+let useTouchControls = shouldUseTouchControls();
+
+function syncTouchMode() {
+  useTouchControls = shouldUseTouchControls();
+  document.body.classList.toggle("touch-controls", useTouchControls);
+}
+
+syncTouchMode();
+window.addEventListener("resize", syncTouchMode);
 
 const BOX = { width: 12, depth: 12, height: 5 };
 const PLAYER = { height: 1.65, radius: 0.35, speed: 3.2, sprint: 5.4 };
@@ -46,8 +64,8 @@ let inscriptionCooldown = 0;
 let bobPhase = 0;
 let playing = false;
 let mobileSprint = false;
-const joystick = { x: 0, y: 0, touchId: null };
-const lookTouch = { touchId: null, lastX: 0, lastY: 0 };
+const joystick = { x: 0, y: 0, pointerId: null };
+const lookTouch = { pointerId: null, lastX: 0, lastY: 0 };
 const lookEuler = new THREE.Euler(0, 0, 0, "YXZ");
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -254,7 +272,7 @@ function updateMovement(dt) {
   const speed = sprint ? PLAYER.sprint : PLAYER.speed;
   moveDir.set(0, 0, 0);
 
-  if (isTouchDevice) {
+  if (useTouchControls) {
     moveDir.x = joystick.x;
     moveDir.z = -joystick.y;
   } else {
@@ -296,7 +314,7 @@ function setJoystickPosition(clientX, clientY) {
 }
 
 function resetJoystick() {
-  joystick.touchId = null;
+  joystick.pointerId = null;
   joystick.x = 0;
   joystick.y = 0;
   joystickStick.style.transform = "translate(0, 0)";
@@ -312,77 +330,83 @@ function applyMobileLook(deltaX, deltaY) {
 }
 
 function setupMobileControls() {
-  joystickZone.addEventListener("touchstart", (e) => {
+  const handlePointerDown = (e) => {
     if (!playing) return;
-    e.preventDefault();
-    const touch = e.changedTouches[0];
-    joystick.touchId = touch.identifier;
-    joystickZone.classList.add("active");
-    setJoystickPosition(touch.clientX, touch.clientY);
-  }, { passive: false });
 
-  lookZone.addEventListener("touchstart", (e) => {
+    if (joystickZone.contains(e.target)) {
+      e.preventDefault();
+      joystick.pointerId = e.pointerId;
+      joystickZone.classList.add("active");
+      joystickZone.setPointerCapture(e.pointerId);
+      setJoystickPosition(e.clientX, e.clientY);
+      return;
+    }
+
+    if (lookZone.contains(e.target)) {
+      e.preventDefault();
+      lookTouch.pointerId = e.pointerId;
+      lookTouch.lastX = e.clientX;
+      lookTouch.lastY = e.clientY;
+      lookZone.classList.add("active");
+      lookZone.setPointerCapture(e.pointerId);
+    }
+  };
+
+  const handlePointerMove = (e) => {
     if (!playing) return;
-    e.preventDefault();
-    const touch = e.changedTouches[0];
-    lookTouch.touchId = touch.identifier;
-    lookTouch.lastX = touch.clientX;
-    lookTouch.lastY = touch.clientY;
-    lookZone.classList.add("active");
-  }, { passive: false });
 
-  sprintBtn.addEventListener("touchstart", (e) => {
+    if (e.pointerId === joystick.pointerId) {
+      e.preventDefault();
+      setJoystickPosition(e.clientX, e.clientY);
+      return;
+    }
+
+    if (e.pointerId === lookTouch.pointerId) {
+      e.preventDefault();
+      applyMobileLook(e.clientX - lookTouch.lastX, e.clientY - lookTouch.lastY);
+      lookTouch.lastX = e.clientX;
+      lookTouch.lastY = e.clientY;
+    }
+  };
+
+  const releasePointer = (e) => {
+    if (e.pointerId === joystick.pointerId) {
+      if (joystickZone.hasPointerCapture(e.pointerId)) {
+        joystickZone.releasePointerCapture(e.pointerId);
+      }
+      resetJoystick();
+    }
+
+    if (e.pointerId === lookTouch.pointerId) {
+      if (lookZone.hasPointerCapture(e.pointerId)) {
+        lookZone.releasePointerCapture(e.pointerId);
+      }
+      lookTouch.pointerId = null;
+      lookZone.classList.remove("active");
+    }
+  };
+
+  mobileControls.addEventListener("pointerdown", handlePointerDown);
+  mobileControls.addEventListener("pointermove", handlePointerMove);
+  mobileControls.addEventListener("pointerup", releasePointer);
+  mobileControls.addEventListener("pointercancel", releasePointer);
+
+  sprintBtn.addEventListener("pointerdown", (e) => {
     if (!playing) return;
     e.preventDefault();
     mobileSprint = true;
     sprintBtn.classList.add("active");
-  }, { passive: false });
+  });
 
-  sprintBtn.addEventListener("touchend", (e) => {
+  sprintBtn.addEventListener("pointerup", (e) => {
     e.preventDefault();
     mobileSprint = false;
     sprintBtn.classList.remove("active");
   });
 
-  sprintBtn.addEventListener("touchcancel", () => {
+  sprintBtn.addEventListener("pointercancel", () => {
     mobileSprint = false;
     sprintBtn.classList.remove("active");
-  });
-
-  window.addEventListener("touchmove", (e) => {
-    if (!playing) return;
-
-    for (const touch of e.touches) {
-      if (touch.identifier === joystick.touchId) {
-        e.preventDefault();
-        setJoystickPosition(touch.clientX, touch.clientY);
-      } else if (touch.identifier === lookTouch.touchId) {
-        e.preventDefault();
-        applyMobileLook(touch.clientX - lookTouch.lastX, touch.clientY - lookTouch.lastY);
-        lookTouch.lastX = touch.clientX;
-        lookTouch.lastY = touch.clientY;
-      }
-    }
-  }, { passive: false });
-
-  window.addEventListener("touchend", (e) => {
-    for (const touch of e.changedTouches) {
-      if (touch.identifier === joystick.touchId) resetJoystick();
-      if (touch.identifier === lookTouch.touchId) {
-        lookTouch.touchId = null;
-        lookZone.classList.remove("active");
-      }
-    }
-  });
-
-  window.addEventListener("touchcancel", (e) => {
-    for (const touch of e.changedTouches) {
-      if (touch.identifier === joystick.touchId) resetJoystick();
-      if (touch.identifier === lookTouch.touchId) {
-        lookTouch.touchId = null;
-        lookZone.classList.remove("active");
-      }
-    }
   });
 }
 
@@ -406,7 +430,7 @@ function tick() {
   requestAnimationFrame(tick);
   const dt = Math.min(clock.getDelta(), 0.05);
 
-  if (playing && (controls.isLocked || isTouchDevice)) {
+  if (playing && (controls.isLocked || useTouchControls)) {
     updateMovement(dt);
     updateInscriptionLook();
     animateDust(dt);
@@ -429,21 +453,44 @@ function tick() {
   renderer.render(scene, camera);
 }
 
+function enableTouchFallback() {
+  useTouchControls = true;
+  document.body.classList.add("touch-controls");
+  statusEl.textContent = "Use the joystick and drag to look";
+}
+
 function startGame() {
+  if (playing) return;
+
   overlay.classList.add("hidden");
   hud.hidden = false;
   playing = true;
+  document.body.classList.add("playing");
   lookEuler.setFromQuaternion(camera.quaternion);
+  syncTouchMode();
 
-  if (isTouchDevice) {
-    mobileControls.hidden = false;
-    statusEl.textContent = "Drag to look around";
-  } else {
-    controls.lock();
+  if (useTouchControls) {
+    statusEl.textContent = "Use the joystick and drag to look";
+    return;
   }
+
+  controls.lock();
+  window.setTimeout(() => {
+    if (playing && !controls.isLocked) enableTouchFallback();
+  }, 400);
 }
 
-enterBtn.addEventListener("click", startGame);
+function bindStartButton() {
+  const start = (e) => {
+    e.preventDefault();
+    startGame();
+  };
+
+  enterBtn.addEventListener("click", start);
+  enterBtn.addEventListener("touchend", start, { passive: false });
+}
+
+bindStartButton();
 setupMobileControls();
 
 controls.addEventListener("lock", () => {
@@ -470,7 +517,7 @@ window.addEventListener("resize", () => {
 });
 
 canvas.addEventListener("click", () => {
-  if (!isTouchDevice && playing && !controls.isLocked) controls.lock();
+  if (!useTouchControls && playing && !controls.isLocked) controls.lock();
 });
 
 tick();
