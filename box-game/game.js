@@ -274,7 +274,7 @@ function updateMovement(dt) {
 
   if (useTouchControls) {
     moveDir.x = joystick.x;
-    moveDir.z = -joystick.y;
+    moveDir.z = joystick.y;
   } else {
     if (keys.has("KeyW") || keys.has("ArrowUp")) moveDir.z -= 1;
     if (keys.has("KeyS") || keys.has("ArrowDown")) moveDir.z += 1;
