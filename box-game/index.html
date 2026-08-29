@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inside the Box</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="overlay">
+    <div id="title-card">
+      <h1>Inside the Box</h1>
+      <p>You are here. That is all there is.</p>
+      <button id="enter-btn" type="button">Step inside</button>
+      <p class="hint">WASD to move · Mouse to look · Shift to sprint · Esc to release mouse</p>
+    </div>
+  </div>
+
+  <div id="hud" hidden>
+    <p id="status">Just a box.</p>
+    <p id="thoughts"></p>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="game.js"></script>
+</body>
+</html>
