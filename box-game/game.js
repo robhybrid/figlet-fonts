@@ -241,6 +241,8 @@ scene.add(dust);
 const raycaster = new THREE.Raycaster();
 const lookDir = new THREE.Vector3();
 const moveDir = new THREE.Vector3();
+const forwardDir = new THREE.Vector3();
+const rightDir = new THREE.Vector3();
 const clock = new THREE.Clock();
 
 function clampPosition() {
@@ -270,28 +272,42 @@ function updateInscriptionLook() {
 function updateMovement(dt) {
   const sprint = keys.has("ShiftLeft") || keys.has("ShiftRight") || mobileSprint;
   const speed = sprint ? PLAYER.sprint : PLAYER.speed;
-  moveDir.set(0, 0, 0);
+  let inputX = 0;
+  let inputZ = 0;
 
   if (useTouchControls) {
-    moveDir.x = joystick.x;
-    moveDir.z = joystick.y;
+    inputX = joystick.x;
+    inputZ = -joystick.y;
   } else {
-    if (keys.has("KeyW") || keys.has("ArrowUp")) moveDir.z -= 1;
-    if (keys.has("KeyS") || keys.has("ArrowDown")) moveDir.z += 1;
-    if (keys.has("KeyA") || keys.has("ArrowLeft")) moveDir.x -= 1;
-    if (keys.has("KeyD") || keys.has("ArrowRight")) moveDir.x += 1;
+    if (keys.has("KeyW") || keys.has("ArrowUp")) inputZ += 1;
+    if (keys.has("KeyS") || keys.has("ArrowDown")) inputZ -= 1;
+    if (keys.has("KeyA") || keys.has("ArrowLeft")) inputX -= 1;
+    if (keys.has("KeyD") || keys.has("ArrowRight")) inputX += 1;
   }
 
-  if (moveDir.lengthSq() > 0) {
-    if (moveDir.lengthSq() > 1) moveDir.normalize();
-    controls.moveRight(moveDir.x * speed * dt);
-    controls.moveForward(-moveDir.z * speed * dt);
-    bobPhase += dt * (sprint ? 11 : 7.5);
-    camera.position.y = PLAYER.height + Math.sin(bobPhase) * 0.025;
-  } else {
+  if (inputX === 0 && inputZ === 0) {
     bobPhase = 0;
     camera.position.y = PLAYER.height;
+    return;
   }
+
+  const inputLength = Math.hypot(inputX, inputZ);
+  if (inputLength > 1) {
+    inputX /= inputLength;
+    inputZ /= inputLength;
+  }
+
+  camera.getWorldDirection(forwardDir);
+  forwardDir.y = 0;
+  forwardDir.normalize();
+
+  rightDir.crossVectors(forwardDir, camera.up).normalize();
+
+  camera.position.addScaledVector(forwardDir, inputZ * speed * dt);
+  camera.position.addScaledVector(rightDir, inputX * speed * dt);
+
+  bobPhase += dt * (sprint ? 11 : 7.5);
+  camera.position.y = PLAYER.height + Math.sin(bobPhase) * 0.025;
 
   clampPosition();
 }
