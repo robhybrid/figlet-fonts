@@ -64,6 +64,18 @@ body {
   opacity: 0.55;
 }
 
+.mobile-hint {
+  display: none;
+}
+
+body.touch-device .desktop-hint {
+  display: none;
+}
+
+body.touch-device .mobile-hint {
+  display: block;
+}
+
 #enter-btn {
   margin-top: 1.75rem;
   padding: 0.85rem 2rem;
@@ -114,4 +126,112 @@ body {
 
 #thoughts.visible {
   opacity: 0.9;
+}
+
+#mobile-controls {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  touch-action: none;
+}
+
+#joystick-zone,
+#look-zone,
+#sprint-btn {
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#joystick-zone {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 42vmin;
+  height: 42vmin;
+  max-width: 220px;
+  max-height: 220px;
+  display: grid;
+  place-items: center;
+}
+
+#joystick-base {
+  width: 9rem;
+  height: 9rem;
+  border-radius: 50%;
+  border: 1px solid rgba(232, 224, 212, 0.18);
+  background: rgba(18, 16, 14, 0.35);
+  position: relative;
+}
+
+#joystick-stick {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3.4rem;
+  height: 3.4rem;
+  margin: -1.7rem 0 0 -1.7rem;
+  border-radius: 50%;
+  border: 1px solid rgba(232, 224, 212, 0.28);
+  background: rgba(232, 224, 212, 0.12);
+  transition: transform 0.05s linear;
+}
+
+#joystick-zone.active #joystick-stick {
+  background: rgba(232, 224, 212, 0.22);
+}
+
+#look-zone {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 58%;
+  height: 100%;
+}
+
+#look-zone::after {
+  content: "Drag to look";
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+#look-zone.active::after {
+  opacity: 0;
+}
+
+#sprint-btn {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  min-width: 4.5rem;
+  padding: 0.85rem 1.1rem;
+  border: 1px solid rgba(232, 224, 212, 0.28);
+  border-radius: 999px;
+  background: rgba(18, 16, 14, 0.45);
+  color: inherit;
+  font: inherit;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+#sprint-btn.active {
+  background: rgba(232, 224, 212, 0.2);
+  border-color: rgba(232, 224, 212, 0.45);
+}
+
+body.touch-device #thoughts {
+  bottom: 7.5rem;
+}
+
+body.touch-device #game {
+  cursor: default;
 }

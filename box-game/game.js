@@ -7,6 +7,18 @@ const enterBtn = document.getElementById("enter-btn");
 const hud = document.getElementById("hud");
 const statusEl = document.getElementById("status");
 const thoughtsEl = document.getElementById("thoughts");
+const mobileControls = document.getElementById("mobile-controls");
+const joystickZone = document.getElementById("joystick-zone");
+const joystickStick = document.getElementById("joystick-stick");
+const lookZone = document.getElementById("look-zone");
+const sprintBtn = document.getElementById("sprint-btn");
+
+const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+const JOYSTICK_RADIUS = 52;
+const LOOK_SENSITIVITY = 0.004;
+const PI_2 = Math.PI / 2;
+
+if (isTouchDevice) document.body.classList.add("touch-device");
 
 const BOX = { width: 12, depth: 12, height: 5 };
 const PLAYER = { height: 1.65, radius: 0.35, speed: 3.2, sprint: 5.4 };
@@ -33,6 +45,10 @@ let thoughtTimer = 0;
 let inscriptionCooldown = 0;
 let bobPhase = 0;
 let playing = false;
+let mobileSprint = false;
+const joystick = { x: 0, y: 0, touchId: null };
+const lookTouch = { touchId: null, lastX: 0, lastY: 0 };
+const lookEuler = new THREE.Euler(0, 0, 0, "YXZ");
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -234,17 +250,22 @@ function updateInscriptionLook() {
 }
 
 function updateMovement(dt) {
-  const sprint = keys.has("ShiftLeft") || keys.has("ShiftRight");
+  const sprint = keys.has("ShiftLeft") || keys.has("ShiftRight") || mobileSprint;
   const speed = sprint ? PLAYER.sprint : PLAYER.speed;
   moveDir.set(0, 0, 0);
 
-  if (keys.has("KeyW") || keys.has("ArrowUp")) moveDir.z -= 1;
-  if (keys.has("KeyS") || keys.has("ArrowDown")) moveDir.z += 1;
-  if (keys.has("KeyA") || keys.has("ArrowLeft")) moveDir.x -= 1;
-  if (keys.has("KeyD") || keys.has("ArrowRight")) moveDir.x += 1;
+  if (isTouchDevice) {
+    moveDir.x = joystick.x;
+    moveDir.z = -joystick.y;
+  } else {
+    if (keys.has("KeyW") || keys.has("ArrowUp")) moveDir.z -= 1;
+    if (keys.has("KeyS") || keys.has("ArrowDown")) moveDir.z += 1;
+    if (keys.has("KeyA") || keys.has("ArrowLeft")) moveDir.x -= 1;
+    if (keys.has("KeyD") || keys.has("ArrowRight")) moveDir.x += 1;
+  }
 
   if (moveDir.lengthSq() > 0) {
-    moveDir.normalize();
+    if (moveDir.lengthSq() > 1) moveDir.normalize();
     controls.moveRight(moveDir.x * speed * dt);
     controls.moveForward(-moveDir.z * speed * dt);
     bobPhase += dt * (sprint ? 11 : 7.5);
@@ -255,6 +276,114 @@ function updateMovement(dt) {
   }
 
   clampPosition();
+}
+
+function setJoystickPosition(clientX, clientY) {
+  const rect = joystickZone.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const dx = clientX - centerX;
+  const dy = clientY - centerY;
+  const distance = Math.hypot(dx, dy);
+  const clamped = Math.min(distance, JOYSTICK_RADIUS);
+  const angle = Math.atan2(dy, dx);
+  const offsetX = Math.cos(angle) * clamped;
+  const offsetY = Math.sin(angle) * clamped;
+
+  joystickStick.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+  joystick.x = offsetX / JOYSTICK_RADIUS;
+  joystick.y = offsetY / JOYSTICK_RADIUS;
+}
+
+function resetJoystick() {
+  joystick.touchId = null;
+  joystick.x = 0;
+  joystick.y = 0;
+  joystickStick.style.transform = "translate(0, 0)";
+  joystickZone.classList.remove("active");
+}
+
+function applyMobileLook(deltaX, deltaY) {
+  lookEuler.setFromQuaternion(camera.quaternion);
+  lookEuler.y -= deltaX * LOOK_SENSITIVITY;
+  lookEuler.x -= deltaY * LOOK_SENSITIVITY;
+  lookEuler.x = Math.max(-PI_2 + 0.12, Math.min(PI_2 - 0.12, lookEuler.x));
+  camera.quaternion.setFromEuler(lookEuler);
+}
+
+function setupMobileControls() {
+  joystickZone.addEventListener("touchstart", (e) => {
+    if (!playing) return;
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    joystick.touchId = touch.identifier;
+    joystickZone.classList.add("active");
+    setJoystickPosition(touch.clientX, touch.clientY);
+  }, { passive: false });
+
+  lookZone.addEventListener("touchstart", (e) => {
+    if (!playing) return;
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    lookTouch.touchId = touch.identifier;
+    lookTouch.lastX = touch.clientX;
+    lookTouch.lastY = touch.clientY;
+    lookZone.classList.add("active");
+  }, { passive: false });
+
+  sprintBtn.addEventListener("touchstart", (e) => {
+    if (!playing) return;
+    e.preventDefault();
+    mobileSprint = true;
+    sprintBtn.classList.add("active");
+  }, { passive: false });
+
+  sprintBtn.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    mobileSprint = false;
+    sprintBtn.classList.remove("active");
+  });
+
+  sprintBtn.addEventListener("touchcancel", () => {
+    mobileSprint = false;
+    sprintBtn.classList.remove("active");
+  });
+
+  window.addEventListener("touchmove", (e) => {
+    if (!playing) return;
+
+    for (const touch of e.touches) {
+      if (touch.identifier === joystick.touchId) {
+        e.preventDefault();
+        setJoystickPosition(touch.clientX, touch.clientY);
+      } else if (touch.identifier === lookTouch.touchId) {
+        e.preventDefault();
+        applyMobileLook(touch.clientX - lookTouch.lastX, touch.clientY - lookTouch.lastY);
+        lookTouch.lastX = touch.clientX;
+        lookTouch.lastY = touch.clientY;
+      }
+    }
+  }, { passive: false });
+
+  window.addEventListener("touchend", (e) => {
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === joystick.touchId) resetJoystick();
+      if (touch.identifier === lookTouch.touchId) {
+        lookTouch.touchId = null;
+        lookZone.classList.remove("active");
+      }
+    }
+  });
+
+  window.addEventListener("touchcancel", (e) => {
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === joystick.touchId) resetJoystick();
+      if (touch.identifier === lookTouch.touchId) {
+        lookTouch.touchId = null;
+        lookZone.classList.remove("active");
+      }
+    }
+  });
 }
 
 function animateDust(dt) {
@@ -277,7 +406,7 @@ function tick() {
   requestAnimationFrame(tick);
   const dt = Math.min(clock.getDelta(), 0.05);
 
-  if (playing && controls.isLocked) {
+  if (playing && (controls.isLocked || isTouchDevice)) {
     updateMovement(dt);
     updateInscriptionLook();
     animateDust(dt);
@@ -304,10 +433,18 @@ function startGame() {
   overlay.classList.add("hidden");
   hud.hidden = false;
   playing = true;
-  controls.lock();
+  lookEuler.setFromQuaternion(camera.quaternion);
+
+  if (isTouchDevice) {
+    mobileControls.hidden = false;
+    statusEl.textContent = "Drag to look around";
+  } else {
+    controls.lock();
+  }
 }
 
 enterBtn.addEventListener("click", startGame);
+setupMobileControls();
 
 controls.addEventListener("lock", () => {
   statusEl.textContent = "Just a box.";
@@ -333,7 +470,7 @@ window.addEventListener("resize", () => {
 });
 
 canvas.addEventListener("click", () => {
-  if (playing && !controls.isLocked) controls.lock();
+  if (!isTouchDevice && playing && !controls.isLocked) controls.lock();
 });
 
 tick();
