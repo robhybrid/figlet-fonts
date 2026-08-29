@@ -359,7 +359,7 @@ function updateMovement(dt) {
 
   if (useTouchControls) {
     inputX = -joystick.x;
-    inputZ = -joystick.y;
+    inputZ = joystick.y;
   } else {
     if (keys.has("KeyW") || keys.has("ArrowUp")) inputZ += 1;
     if (keys.has("KeyS") || keys.has("ArrowDown")) inputZ -= 1;
