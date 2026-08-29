@@ -157,7 +157,8 @@ body.touch-controls.playing #game {
 
 #joystick-zone,
 #look-zone,
-#sprint-btn {
+#sprint-btn,
+#interact-btn {
   pointer-events: auto;
   touch-action: none;
   -webkit-user-select: none;
@@ -252,6 +253,42 @@ body.touch-controls.playing #game {
 #sprint-btn.active {
   background: rgba(232, 224, 212, 0.2);
   border-color: rgba(232, 224, 212, 0.45);
+}
+
+#interact-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%);
+  min-width: 6.5rem;
+  padding: 0.85rem 1.25rem;
+  border: 2px solid rgba(232, 224, 212, 0.35);
+  border-radius: 999px;
+  background: rgba(18, 16, 14, 0.65);
+  color: inherit;
+  font: inherit;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+#interact-btn:not([hidden]) {
+  animation: interact-pulse 2s ease-in-out infinite;
+}
+
+@keyframes interact-pulse {
+  0%,
+  100% {
+    border-color: rgba(232, 224, 212, 0.35);
+  }
+
+  50% {
+    border-color: rgba(232, 224, 212, 0.65);
+  }
+}
+
+body:not(.touch-controls) #interact-btn {
+  display: none !important;
 }
 
 @media (max-width: 900px), (pointer: coarse), (hover: none) {

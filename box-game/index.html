@@ -6,7 +6,7 @@
   <title>Inside the Box</title>
   <link rel="stylesheet" href="style.css">
   <script>
-    window.__BOX_GAME_BUILD__ = "20260829-mobile6";
+    window.__BOX_GAME_BUILD__ = "20260829-pickup1";
   </script>
 </head>
 <body>
@@ -17,8 +17,8 @@
       <h1>Inside the Box</h1>
       <p>You are here. That is all there is.</p>
       <button id="enter-btn" type="button">Step inside</button>
-      <p class="hint desktop-hint">WASD to move · Mouse to look · Shift to sprint · Esc to release mouse</p>
-      <p class="hint mobile-hint">Left stick to move · Drag right side to look · Hold Run to sprint</p>
+      <p class="hint desktop-hint">WASD to move · Mouse to look · Shift to sprint · E to pick up · Esc to release mouse</p>
+      <p class="hint mobile-hint">Left stick to move · Drag right side to look · Hold Run to sprint · Tap Pick up when near the box</p>
     </div>
   </div>
 
@@ -35,6 +35,7 @@
     </div>
     <div id="look-zone" aria-label="Look around"></div>
     <button id="sprint-btn" type="button" aria-label="Sprint">Run</button>
+    <button id="interact-btn" type="button" aria-label="Interact" hidden>Pick up</button>
   </div>
 
   <script type="importmap">
@@ -45,6 +46,6 @@
     }
   }
   </script>
-  <script type="module" src="game.js?v=20260829-mobile5"></script>
+  <script type="module" src="game.js?v=20260829-pickup1"></script>
 </body>
 </html>

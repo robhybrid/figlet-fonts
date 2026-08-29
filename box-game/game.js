@@ -12,10 +12,13 @@ const joystickZone = document.getElementById("joystick-zone");
 const joystickStick = document.getElementById("joystick-stick");
 const lookZone = document.getElementById("look-zone");
 const sprintBtn = document.getElementById("sprint-btn");
+const interactBtn = document.getElementById("interact-btn");
 
 const JOYSTICK_RADIUS = 52;
 const LOOK_SENSITIVITY = 0.004;
 const PI_2 = Math.PI / 2;
+const PICKUP_RANGE = 2.8;
+const CRATE_HOLD_OFFSET = new THREE.Vector3(0.35, -0.28, -0.72);
 
 function shouldUseTouchControls() {
   const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
@@ -64,6 +67,8 @@ let inscriptionCooldown = 0;
 let bobPhase = 0;
 let playing = false;
 let mobileSprint = false;
+let holdingCrate = false;
+let canInteractWithCrate = false;
 const joystick = { x: 0, y: 0, pointerId: null };
 const lookTouch = { pointerId: null, lastX: 0, lastY: 0 };
 const lookEuler = new THREE.Euler(0, 0, 0, "YXZ");
@@ -216,11 +221,14 @@ const crate = new THREE.Mesh(
   new THREE.MeshStandardMaterial({
     map: makeCardboardTexture({ r: 0.58, g: 0.46, b: 0.34 }, 0.1),
     roughness: 0.9,
+    emissive: 0x000000,
+    emissiveIntensity: 0.35,
   })
 );
 crate.position.set(-2.2, 0.45, 1.8);
 crate.castShadow = true;
 crate.receiveShadow = true;
+crate.userData.pickupable = true;
 scene.add(crate);
 
 const dustCount = 120;
@@ -260,12 +268,86 @@ function showThought(text, duration = 3.5) {
 }
 
 function updateInscriptionLook() {
-  if (inscriptionCooldown > 0) return;
+  if (inscriptionCooldown > 0 || holdingCrate) return;
   camera.getWorldDirection(lookDir);
   raycaster.set(camera.position, lookDir);
   const hits = raycaster.intersectObjects(inscriptionMeshes, false);
   if (hits.length > 0 && hits[0].distance < 4.5) {
     showThought(hits[0].object.userData.text, 4);
+  }
+}
+
+function canPickupCrate() {
+  if (holdingCrate) return true;
+  camera.getWorldDirection(lookDir);
+  raycaster.set(camera.position, lookDir);
+  const hits = raycaster.intersectObject(crate, false);
+  return hits.length > 0 && hits[0].distance < PICKUP_RANGE;
+}
+
+function clampCratePosition() {
+  const halfW = BOX.width / 2 - 0.55;
+  const halfD = BOX.depth / 2 - 0.55;
+  crate.position.x = THREE.MathUtils.clamp(crate.position.x, -halfW, halfW);
+  crate.position.z = THREE.MathUtils.clamp(crate.position.z, -halfD, halfD);
+  crate.position.y = 0.45;
+}
+
+function pickupCrate() {
+  holdingCrate = true;
+  scene.remove(crate);
+  camera.add(crate);
+  crate.position.copy(CRATE_HOLD_OFFSET);
+  crate.rotation.set(0, 0, 0);
+  showThought("A box inside a box. Naturally.", 4);
+  updateInteractPrompt();
+}
+
+function dropCrate() {
+  holdingCrate = false;
+  camera.remove(crate);
+  scene.add(crate);
+
+  camera.getWorldDirection(forwardDir);
+  forwardDir.y = 0;
+  forwardDir.normalize();
+  crate.position.copy(camera.position);
+  crate.position.addScaledVector(forwardDir, 1.1);
+  crate.rotation.set(0, camera.rotation.y + Math.PI, 0);
+  clampCratePosition();
+  showThought("Back on the floor. For now.", 3);
+  updateInteractPrompt();
+}
+
+function toggleCratePickup() {
+  if (!playing) return;
+  if (holdingCrate) {
+    dropCrate();
+    return;
+  }
+  if (canPickupCrate()) pickupCrate();
+}
+
+function updateHeldCrate() {
+  if (!holdingCrate) return;
+  crate.position.y = CRATE_HOLD_OFFSET.y + Math.sin(clock.elapsedTime * 4) * 0.018;
+  crate.rotation.y += 0.008;
+}
+
+function updateInteractPrompt() {
+  canInteractWithCrate = canPickupCrate();
+  const highlight = canInteractWithCrate && !holdingCrate;
+
+  crate.material.emissive.setHex(highlight ? 0x5a4028 : 0x000000);
+  crate.material.emissiveIntensity = highlight ? 0.45 : 0;
+
+  if (useTouchControls) {
+    interactBtn.hidden = !canInteractWithCrate;
+    interactBtn.textContent = holdingCrate ? "Drop" : "Pick up";
+  } else if (canInteractWithCrate) {
+    statusEl.textContent = holdingCrate ? "Press E to drop" : "Press E to pick up";
+  } else if (!controls.isLocked || useTouchControls) {
+    statusEl.textContent = useTouchControls ? "Use the joystick and drag to look" : "Just a box.";
   }
 }
 
@@ -424,6 +506,12 @@ function setupMobileControls() {
     mobileSprint = false;
     sprintBtn.classList.remove("active");
   });
+
+  interactBtn.addEventListener("pointerup", (e) => {
+    if (!playing) return;
+    e.preventDefault();
+    toggleCratePickup();
+  });
 }
 
 function animateDust(dt) {
@@ -449,6 +537,8 @@ function tick() {
   if (playing && (controls.isLocked || useTouchControls)) {
     updateMovement(dt);
     updateInscriptionLook();
+    updateHeldCrate();
+    updateInteractPrompt();
     animateDust(dt);
     flickerBulb(clock.elapsedTime);
 
@@ -510,7 +600,7 @@ bindStartButton();
 setupMobileControls();
 
 controls.addEventListener("lock", () => {
-  statusEl.textContent = "Just a box.";
+  if (!canInteractWithCrate) statusEl.textContent = "Just a box.";
 });
 
 controls.addEventListener("unlock", () => {
@@ -519,6 +609,10 @@ controls.addEventListener("unlock", () => {
 
 window.addEventListener("keydown", (e) => {
   keys.add(e.code);
+  if (e.code === "KeyE") {
+    e.preventDefault();
+    toggleCratePickup();
+  }
   if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) {
     e.preventDefault();
   }
