@@ -157,12 +157,22 @@ body.touch-controls.playing #game {
 
 #joystick-zone,
 #look-zone,
-#sprint-btn,
-#interact-btn {
+#mobile-actions,
+#mobile-actions button {
   pointer-events: auto;
-  touch-action: none;
+  touch-action: manipulation;
   -webkit-user-select: none;
   user-select: none;
+}
+
+#mobile-actions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6.5rem;
+  z-index: 30;
+  pointer-events: none;
 }
 
 #joystick-zone {
@@ -214,7 +224,7 @@ body.touch-controls.playing #game {
   right: 0;
   top: 0;
   width: 58%;
-  height: 100%;
+  height: calc(100% - 6.5rem);
 }
 
 #look-zone::after {
@@ -252,6 +262,13 @@ body.touch-controls.playing #game {
   letter-spacing: 0.06em;
   cursor: pointer;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 31;
+}
+
+#sprint-btn:disabled,
+#interact-btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 #sprint-btn.active {
@@ -274,9 +291,10 @@ body.touch-controls.playing #game {
   letter-spacing: 0.06em;
   cursor: pointer;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 31;
 }
 
-#interact-btn:not([hidden]) {
+#interact-btn:not(:disabled) {
   animation: interact-pulse 2s ease-in-out infinite;
 }
 
@@ -291,7 +309,7 @@ body.touch-controls.playing #game {
   }
 }
 
-body:not(.touch-controls) #interact-btn {
+body:not(.touch-controls) #mobile-actions {
   display: none !important;
 }
 

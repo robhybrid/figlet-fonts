@@ -14,12 +14,13 @@ const joystickStick = document.getElementById("joystick-stick");
 const lookZone = document.getElementById("look-zone");
 const sprintBtn = document.getElementById("sprint-btn");
 const interactBtn = document.getElementById("interact-btn");
+const mobileActions = document.getElementById("mobile-actions");
 
 const JOYSTICK_RADIUS = 52;
 const JOYSTICK_DEADZONE = 0.12;
 const LOOK_SENSITIVITY = 0.004;
 const PI_2 = Math.PI / 2;
-const PICKUP_RANGE = 2.8;
+const PICKUP_RANGE = 3.5;
 const CRATE_HOLD_OFFSET = new THREE.Vector3(0.35, -0.28, -0.72);
 
 function shouldUseTouchControls() {
@@ -343,8 +344,9 @@ function updateInteractPrompt() {
   crate.material.emissive.setHex(highlight ? 0x5a4028 : 0x000000);
   crate.material.emissiveIntensity = highlight ? 0.45 : 0;
 
-  if (useTouchControls) {
-    interactBtn.hidden = !canInteractWithCrate;
+  if (useTouchControls && playing) {
+    interactBtn.hidden = false;
+    interactBtn.disabled = !canInteractWithCrate;
     interactBtn.textContent = holdingCrate ? "Drop" : "Pick up";
   } else if (canInteractWithCrate) {
     statusEl.textContent = holdingCrate ? "Press E to drop" : "Press E to pick up";
@@ -416,7 +418,7 @@ function setJoystickPosition(clientX, clientY) {
 
   joystickStick.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
   joystick.x = applyDeadzone(offsetX / JOYSTICK_RADIUS);
-  joystick.y = applyDeadzone(-offsetY / JOYSTICK_RADIUS);
+  joystick.y = applyDeadzone(offsetY / JOYSTICK_RADIUS);
 }
 
 function resetJoystick() {
@@ -438,6 +440,7 @@ function applyMobileLook(deltaX, deltaY) {
 function setupMobileControls() {
   const handlePointerDown = (e) => {
     if (!playing) return;
+    if (e.target.closest("#mobile-actions")) return;
 
     if (joystickZone.contains(e.target)) {
       e.preventDefault();
@@ -514,12 +517,19 @@ function setupMobileControls() {
     mobileSprint = false;
     sprintBtn.classList.remove("active");
   });
+}
 
-  interactBtn.addEventListener("pointerup", (e) => {
-    if (!playing) return;
+function bindInteractButton() {
+  const interact = (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    if (!playing || interactBtn.disabled) return;
     toggleCratePickup();
-  });
+  };
+
+  interactBtn.addEventListener("click", interact);
+  interactBtn.addEventListener("touchend", interact, { passive: false });
+  interactBtn.addEventListener("pointerup", interact);
 }
 
 function animateDust(dt) {
@@ -584,6 +594,8 @@ function startGame() {
   syncTouchMode();
 
   if (useTouchControls) {
+    interactBtn.hidden = false;
+    interactBtn.disabled = true;
     statusEl.textContent = "Use the joystick and drag to look";
     return;
   }
@@ -606,6 +618,7 @@ function bindStartButton() {
 
 bindStartButton();
 setupMobileControls();
+bindInteractButton();
 
 controls.addEventListener("lock", () => {
   if (!canInteractWithCrate) statusEl.textContent = "Just a box.";
