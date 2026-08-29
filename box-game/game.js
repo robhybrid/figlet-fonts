@@ -276,7 +276,7 @@ function updateMovement(dt) {
   let inputZ = 0;
 
   if (useTouchControls) {
-    inputX = joystick.x;
+    inputX = -joystick.x;
     inputZ = -joystick.y;
   } else {
     if (keys.has("KeyW") || keys.has("ArrowUp")) inputZ += 1;
@@ -303,8 +303,7 @@ function updateMovement(dt) {
 
   rightDir.crossVectors(forwardDir, camera.up).normalize();
 
-  const forwardAmount = useTouchControls ? -inputZ : inputZ;
-  camera.position.addScaledVector(forwardDir, forwardAmount * speed * dt);
+  camera.position.addScaledVector(forwardDir, inputZ * speed * dt);
   camera.position.addScaledVector(rightDir, inputX * speed * dt);
 
   bobPhase += dt * (sprint ? 11 : 7.5);
