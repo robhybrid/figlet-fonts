@@ -9,12 +9,14 @@ const statusEl = document.getElementById("status");
 const thoughtsEl = document.getElementById("thoughts");
 const mobileControls = document.getElementById("mobile-controls");
 const joystickZone = document.getElementById("joystick-zone");
+const joystickBase = document.getElementById("joystick-base");
 const joystickStick = document.getElementById("joystick-stick");
 const lookZone = document.getElementById("look-zone");
 const sprintBtn = document.getElementById("sprint-btn");
 const interactBtn = document.getElementById("interact-btn");
 
 const JOYSTICK_RADIUS = 52;
+const JOYSTICK_DEADZONE = 0.12;
 const LOOK_SENSITIVITY = 0.004;
 const PI_2 = Math.PI / 2;
 const PICKUP_RANGE = 2.8;
@@ -394,8 +396,14 @@ function updateMovement(dt) {
   clampPosition();
 }
 
+function applyDeadzone(value) {
+  const abs = Math.abs(value);
+  if (abs < JOYSTICK_DEADZONE) return 0;
+  return Math.sign(value) * (abs - JOYSTICK_DEADZONE) / (1 - JOYSTICK_DEADZONE);
+}
+
 function setJoystickPosition(clientX, clientY) {
-  const rect = joystickZone.getBoundingClientRect();
+  const rect = joystickBase.getBoundingClientRect();
   const centerX = rect.left + rect.width / 2;
   const centerY = rect.top + rect.height / 2;
   const dx = clientX - centerX;
@@ -406,16 +414,16 @@ function setJoystickPosition(clientX, clientY) {
   const offsetX = Math.cos(angle) * clamped;
   const offsetY = Math.sin(angle) * clamped;
 
-  joystickStick.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
-  joystick.x = offsetX / JOYSTICK_RADIUS;
-  joystick.y = offsetY / JOYSTICK_RADIUS;
+  joystickStick.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
+  joystick.x = applyDeadzone(offsetX / JOYSTICK_RADIUS);
+  joystick.y = applyDeadzone(-offsetY / JOYSTICK_RADIUS);
 }
 
 function resetJoystick() {
   joystick.pointerId = null;
   joystick.x = 0;
   joystick.y = 0;
-  joystickStick.style.transform = "translate(0, 0)";
+  joystickStick.style.transform = "translate3d(0, 0, 0)";
   joystickZone.classList.remove("active");
 }
 
