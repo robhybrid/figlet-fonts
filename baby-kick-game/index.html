@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a0a2e">
+  <title>Baby Boot — Stress Relief</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👶</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <canvas id="game"></canvas>
+
+    <header class="hud">
+      <div class="hud-block">
+        <span class="label">Stress</span>
+        <div class="meter-wrap">
+          <div id="stress-bar" class="meter-fill"></div>
+        </div>
+        <span id="stress-pct" class="value">100%</span>
+      </div>
+      <div class="hud-block center">
+        <span class="label">Score</span>
+        <span id="score" class="score">0</span>
+      </div>
+      <div class="hud-block right">
+        <span class="label">Combo</span>
+        <span id="combo" class="combo">×1</span>
+      </div>
+    </header>
+
+    <div id="kick-hint" class="kick-hint">👟 Swipe to kick!</div>
+
+    <div id="overlay" class="overlay">
+      <div class="card">
+        <h1>👶 Baby Boot</h1>
+        <p class="tagline">Kick the chaos away. Feel better.</p>
+        <p class="instructions">
+          Cartoon babies bounce around your screen.<br>
+          <strong>Swipe</strong> through them to boot them off.<br>
+          Lower your stress. Build combos. Breathe.
+        </p>
+        <button id="start-btn" class="btn">Start Kicking</button>
+      </div>
+    </div>
+
+    <div id="zen-overlay" class="zen-overlay hidden">
+      <div class="zen-card">
+        <div class="zen-emoji">🧘</div>
+        <h2>Zen Mode</h2>
+        <p>Stress eliminated. You are at peace.</p>
+        <p class="final-score">Score: <span id="final-score">0</span></p>
+        <button id="again-btn" class="btn">Kick Again</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/game.js"></script>
+</body>
+</html>

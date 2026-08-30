@@ -1,0 +1,243 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: #1a0a2e;
+}
+
+#app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: max(12px, env(safe-area-inset-top)) 16px 8px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hud-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.hud-block.center {
+  align-items: center;
+}
+
+.hud-block.right {
+  align-items: flex-end;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.meter-wrap {
+  width: 100%;
+  max-width: 120px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #ff6b6b, #ffa94d);
+  border-radius: 999px;
+  transition: width 0.25s ease, background 0.4s ease;
+}
+
+.meter-fill.low {
+  background: linear-gradient(90deg, #51cf66, #94d82d);
+}
+
+.value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.score {
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(255, 107, 107, 0.5);
+  line-height: 1;
+}
+
+.combo {
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffd43b;
+  text-shadow: 0 0 20px rgba(255, 212, 59, 0.6);
+  transition: transform 0.15s ease;
+}
+
+.combo.bump {
+  transform: scale(1.3);
+}
+
+.kick-hint {
+  position: absolute;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 10;
+  animation: pulse 2s ease-in-out infinite;
+  transition: opacity 0.5s ease;
+}
+
+.kick-hint.hidden {
+  opacity: 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.7; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.04); }
+}
+
+.overlay,
+.zen-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 5, 20, 0.82);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+  padding: 24px;
+  pointer-events: auto;
+}
+
+.zen-overlay {
+  background: rgba(10, 30, 20, 0.88);
+}
+
+.hidden {
+  display: none !important;
+}
+
+.card,
+.zen-card {
+  max-width: 360px;
+  width: 100%;
+  background: linear-gradient(145deg, #2d1b4e, #1a0a2e);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  padding: 32px 28px;
+  text-align: center;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+
+.card h1,
+.zen-card h2 {
+  font-size: 32px;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.tagline {
+  color: #ffa94d;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.instructions {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+.instructions strong {
+  color: #ffd43b;
+}
+
+.btn {
+  display: inline-block;
+  width: 100%;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ff6b6b, #ff922b);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 8px 24px rgba(255, 107, 107, 0.4);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.btn:active {
+  transform: scale(0.97);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+}
+
+.zen-emoji {
+  font-size: 64px;
+  margin-bottom: 8px;
+}
+
+.zen-card p {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.final-score {
+  font-size: 20px !important;
+  font-weight: 700;
+  color: #94d82d !important;
+  margin: 16px 0 24px !important;
+}
