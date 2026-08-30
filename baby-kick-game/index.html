@@ -4,10 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Baby Boot">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#1a0a2e">
+  <meta name="format-detection" content="telephone=no">
   <title>Baby Boot — Stress Relief</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👶</text></svg>">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -34,6 +39,16 @@
 
     <div id="kick-hint" class="kick-hint">👟 Swipe to kick!</div>
 
+    <div id="install-banner" class="install-banner hidden">
+      <span>📱 Install Baby Boot on your home screen</span>
+      <button id="install-btn" class="install-btn">Install</button>
+      <button id="dismiss-install" class="dismiss-btn" aria-label="Dismiss">×</button>
+    </div>
+
+    <p id="ios-install-hint" class="ios-hint hidden">
+      Tap <strong>Share</strong> → <strong>Add to Home Screen</strong> to install
+    </p>
+
     <div id="overlay" class="overlay">
       <div class="card">
         <h1>👶 Baby Boot</h1>
@@ -43,6 +58,7 @@
           <strong>Swipe</strong> through them to boot them off.<br>
           Lower your stress. Build combos. Breathe.
         </p>
+        <p class="mobile-note">📱 Optimized for phones — swipe with your finger!</p>
         <button id="start-btn" class="btn">Start Kicking</button>
       </div>
     </div>
@@ -58,6 +74,7 @@
     </div>
   </div>
 
+  <script src="js/mobile.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>

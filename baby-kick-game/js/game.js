@@ -128,7 +128,8 @@
 
   // ── Baby entity ────────────────────────────────────────
   function createBaby() {
-    const r = 28 + Math.random() * 14;
+    const scale = Math.min(W, H) / 400;
+    const r = (28 + Math.random() * 14) * Math.max(0.85, Math.min(scale, 1.3));
     const margin = r + 20;
     const color = BABY_COLORS[Math.floor(Math.random() * BABY_COLORS.length)];
     const side = Math.floor(Math.random() * 4);
@@ -231,6 +232,8 @@
       playKickSound(power);
 
       if (kickCount >= 3) ui.kickHint.classList.add('hidden');
+
+      window.__babyBootMobile?.vibrate([12, 30, 18]);
     }
 
     if (!hitAny) {
@@ -241,41 +244,56 @@
     updateHUD();
   }
 
-  // ── Input ──────────────────────────────────────────────
-  let touchStart = null;
+  // ── Input (Pointer Events — touch + mouse unified) ───
+  let activePointer = null;
+  let swipeTrail = [];
 
-  function pointerDown(x, y) {
-    if (!running) return;
-    touchStart = { x, y, time: performance.now() };
+  function getCoords(e) {
+    return { x: e.clientX, y: e.clientY };
   }
 
-  function pointerUp(x, y) {
-    if (!running || !touchStart) return;
-    processKick(touchStart.x, touchStart.y, x, y);
-    touchStart = null;
+  function pointerDown(e) {
+    if (!running || e.pointerType === 'mouse' && e.button !== 0) return;
+    ensureAudio();
+    activePointer = e.pointerId;
+    canvas.setPointerCapture(e.pointerId);
+    const { x, y } = getCoords(e);
+    swipeTrail = [{ x, y }];
   }
 
-  canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    ensureAudio();
-    const t = e.changedTouches[0];
-    pointerDown(t.clientX, t.clientY);
-  }, { passive: false });
+  function pointerMove(e) {
+    if (!running || activePointer !== e.pointerId || swipeTrail.length === 0) return;
+    const { x, y } = getCoords(e);
+    const prev = swipeTrail[swipeTrail.length - 1];
+    const dist = Math.hypot(x - prev.x, y - prev.y);
+    if (dist < 6) return;
 
-  canvas.addEventListener('touchend', (e) => {
-    e.preventDefault();
-    const t = e.changedTouches[0];
-    pointerUp(t.clientX, t.clientY);
-  }, { passive: false });
+    processKick(prev.x, prev.y, x, y);
+    swipeTrail.push({ x, y });
+    if (swipeTrail.length > 24) swipeTrail.shift();
+  }
 
-  canvas.addEventListener('mousedown', (e) => {
-    ensureAudio();
-    pointerDown(e.clientX, e.clientY);
-  });
+  function pointerUp(e) {
+    if (activePointer !== e.pointerId) return;
+    if (swipeTrail.length >= 1) {
+      const { x, y } = getCoords(e);
+      const prev = swipeTrail[swipeTrail.length - 1];
+      if (Math.hypot(x - prev.x, y - prev.y) > 4) {
+        processKick(prev.x, prev.y, x, y);
+      } else if (swipeTrail.length === 1) {
+        processKick(prev.x, prev.y, x + 40, y);
+      }
+    }
+    activePointer = null;
+    swipeTrail = [];
+    try { canvas.releasePointerCapture(e.pointerId); } catch { /* ok */ }
+  }
 
-  canvas.addEventListener('mouseup', (e) => {
-    pointerUp(e.clientX, e.clientY);
-  });
+  canvas.addEventListener('pointerdown', pointerDown);
+  canvas.addEventListener('pointermove', pointerMove);
+  canvas.addEventListener('pointerup', pointerUp);
+  canvas.addEventListener('pointercancel', pointerUp);
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
   // ── Draw baby ──────────────────────────────────────────
   function drawBaby(b) {
@@ -468,10 +486,11 @@
 
     if (stress <= 0 && !zenMode) {
       zenMode = true;
-      running = false;
+      stopGame();
       ui.finalScore.textContent = score.toLocaleString();
       ui.zenOverlay.classList.remove('hidden');
       playZenSound();
+      window.__babyBootMobile?.vibrate([40, 60, 40, 60, 80]);
     }
   }
 
@@ -500,18 +519,37 @@
     for (const k of kicks) {
       ctx.globalAlpha = k.life * 0.7;
       ctx.strokeStyle = '#ffd43b';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = window.__babyBootMobile?.isMobile ? 6 : 4;
       ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(k.x1, k.y1);
       ctx.lineTo(k.x2, k.y2);
       ctx.stroke();
 
-      // Shoe at end
-      ctx.font = '24px serif';
+      ctx.font = `${window.__babyBootMobile?.isMobile ? 28 : 24}px serif`;
       ctx.fillText('👟', k.x2 - 12, k.y2 + 8);
     }
     ctx.globalAlpha = 1;
+
+    // Live swipe trail while finger is down
+    if (swipeTrail.length > 1) {
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = window.__babyBootMobile?.isMobile ? 5 : 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(swipeTrail[0].x, swipeTrail[0].y);
+      for (let i = 1; i < swipeTrail.length; i++) {
+        ctx.lineTo(swipeTrail[i].x, swipeTrail[i].y);
+      }
+      ctx.stroke();
+      const last = swipeTrail[swipeTrail.length - 1];
+      ctx.globalAlpha = 0.9;
+      ctx.font = '28px serif';
+      ctx.fillText('👟', last.x - 14, last.y + 10);
+      ctx.globalAlpha = 1;
+    }
 
     for (const p of popups) {
       ctx.globalAlpha = Math.min(1, p.life * 2);
@@ -562,10 +600,23 @@
     ui.overlay.classList.add('hidden');
     ui.zenOverlay.classList.add('hidden');
     running = true;
+    window.__babyBootRunning = true;
+    window.__babyBootMobile?.requestWakeLock();
+  }
+
+  function stopGame() {
+    running = false;
+    window.__babyBootRunning = false;
+    window.__babyBootMobile?.releaseWakeLock();
   }
 
   ui.startBtn.addEventListener('click', startGame);
   ui.againBtn.addEventListener('click', startGame);
+  ui.startBtn.addEventListener('touchend', (e) => { e.preventDefault(); startGame(); });
+  ui.againBtn.addEventListener('touchend', (e) => { e.preventDefault(); startGame(); });
+
+  window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+  window.addEventListener('resize', resize);
 
   updateHUD();
   requestAnimationFrame(loop);
