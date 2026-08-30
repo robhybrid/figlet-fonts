@@ -610,13 +610,18 @@
     window.__babyBootMobile?.releaseWakeLock();
   }
 
-  ui.startBtn.addEventListener('click', startGame);
-  ui.againBtn.addEventListener('click', startGame);
-  ui.startBtn.addEventListener('touchend', (e) => { e.preventDefault(); startGame(); });
-  ui.againBtn.addEventListener('touchend', (e) => { e.preventDefault(); startGame(); });
+  let lastStartAt = 0;
+  function safeStart() {
+    const now = Date.now();
+    if (now - lastStartAt < 400) return;
+    lastStartAt = now;
+    startGame();
+  }
+
+  ui.startBtn.addEventListener('click', safeStart);
+  ui.againBtn.addEventListener('click', safeStart);
 
   window.addEventListener('orientationchange', () => setTimeout(resize, 100));
-  window.addEventListener('resize', resize);
 
   updateHUD();
   requestAnimationFrame(loop);
