@@ -2,7 +2,7 @@
     ┣╸ ┃┃╺┓┃  ┣╸  ┃    ┣╸ ┃ ┃┃┗┫ ┃ ┗━┓
     ╹  ╹┗━┛┗━╸┗━╸ ╹    ╹  ┗━┛╹ ╹ ╹ ┗━┛
 
-A curated collection of **437** ASCII art fonts for [figlet](http://www.figlet.org/) and [toilet](http://caca.zoy.org/wiki/toilet) — 395 `.flf` + 41 `.tlf` files, plus 39 `.flc` control/encoding files.
+A curated collection of **439** ASCII art fonts for [figlet](http://www.figlet.org/) and [toilet](http://caca.zoy.org/wiki/toilet) — 398 `.flf` + 41 `.tlf` files, plus 39 `.flc` control/encoding files.
 
 ---
 
@@ -29,24 +29,32 @@ All scripts live in `scripts/` and are also wired to `npm run` shortcuts.
 
 Renders every font with a sample phrase, respects terminal width, pipes cleanly.
 
+Renders the font file as-is. A sibling `.chars` mapping is **not** applied — use `npm run apply` or `npm start` for that.
+
 ```bash
 node scripts/preview.js                        # all fonts, default sample text
 node scripts/preview.js -t "Hello World"       # custom text
 node scripts/preview.js -f "AMC*"              # filter by filename glob
 node scripts/preview.js -- -c                  # pass figlet flags (centered)
 node scripts/preview.js -t "ABC" -- -w 120     # custom text + custom width
+node scripts/preview.js -a -f Broadway.flf     # every glyph the font defines
+node scripts/preview.js -a -f "AMC Neko.flf" -w  # stay open; refresh on save
 node scripts/preview.js --no-color | less      # pipe-friendly (no ANSI)
 
 # npm shortcut
 npm run preview -- -t "Hello" -f "Doom*"
 ```
 
+Uses the system `figlet` binary when it is on `PATH`. If it is missing, falls back to the npm [`figlet`](https://www.npmjs.com/package/figlet) package (`npm install`).
+
 Options:
 
 | Flag                  | Description                                                     |
 | --------------------- | --------------------------------------------------------------- |
 | `-t, --text <text>`   | Sample text (default: `Mr. Jock, TV quiz PhD, bags few lynx.`)  |
+| `-a, --all`           | Render every drawable glyph defined in the font (not a fixed alphabet) |
 | `-f, --filter <glob>` | Filter fonts by filename (`*` and `?` wildcards)                |
+| `-w, --watch`         | Stay open; re-render when the font or sibling `.chars` file changes |
 | `--no-color`          | Disable ANSI color (auto-disabled when piping)                  |
 | `--`                  | Pass remaining args directly to figlet (`-c`, `-r`, `-w`, etc.) |
 
@@ -55,10 +63,12 @@ Options:
 ### `watch.js` — live font editor with auto-preview
 
 ```bash
-npm start
+npm start                     # watch everything (dry-run)
+npm start -- Broadway.flf     # watch this font + Broadway.chars
+npm start -- --write          # auto-write -b.flf on each save
 ```
 
-Watches all `.flf`/`.tlf` fonts and `.chars` mapping files. When any file changes, the terminal clears and the updated font is previewed instantly.
+Dry-run by default: mapping is applied in memory and previewed. Press **W** to write `<font>-b.flf`. Pass `--write` to save on every change.
 
 **Interactive keys:**
 
@@ -68,6 +78,7 @@ Watches all `.flf`/`.tlf` fonts and `.chars` mapping files. When any file change
 | `A` | Render **A**ll characters (A–Z, a–z, 0–9, punctuation)           |
 | `S` | Render **S**ample text (`Mr. Jock, TV quiz PhD, bags few lynx.`) |
 | `E` | **E**nter custom sample text                                     |
+| `W` | **W**rite the mapped font to `<name>-b.flf`                      |
 
 Uses `process.stdout.columns` for terminal-width-aware rendering and separators.
 
@@ -83,8 +94,10 @@ node scripts/font-chars.js extract amcaaa01.flf
 
 # Edit amcaaa01.chars (e.g. S → ▓, | → ┃)
 
-# Apply: amcaaa01.flf + amcaaa01.chars → amcaaa01-b.flf
+# Apply: preview the result, then confirm write
 node scripts/font-chars.js apply amcaaa01.flf amcaaa01.chars
+node scripts/font-chars.js apply amcaaa01.flf amcaaa01.chars -y          # write without prompting
+node scripts/font-chars.js apply amcaaa01.flf amcaaa01.chars --no-write  # preview only
 
 # Custom output path
 node scripts/font-chars.js apply amcaaa01.flf amcaaa01.chars --output my-font.flf
@@ -98,7 +111,7 @@ npm run apply   -- amcaaa01.flf amcaaa01.chars
 
 `.chars` files are listed in `.gitignore` — they're local working files.
 
-When `npm start` is running, saving a `.chars` file auto-applies and previews the result.
+When `npm start` is running, saving a `.chars` file applies the mapping in memory and previews it. Press **W** to write the variant (or pass `--write` to save on every change). `npm run preview` always shows the source font, not the mapping.
 
 ---
 

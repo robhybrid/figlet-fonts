@@ -30,5 +30,8 @@
     "extract": "node scripts/font-chars.js extract",
     "apply": "node scripts/font-chars.js apply",
     "preview": "node scripts/preview.js"
+  },
+  "dependencies": {
+    "figlet": "^1.11.4"
   }
 }

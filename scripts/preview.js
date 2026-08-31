@@ -1,49 +1,93 @@
 #!/usr/bin/env node
 // preview.js
-// Renders all fonts to stdout using a sample phrase.
-// Passes any extra figlet flags directly to figlet.
+// Renders fonts to stdout using a sample phrase (or every drawable glyph).
+// Shows the font file as-is — it does not apply a sibling .chars mapping.
+// Use `npm run apply` or `npm start` for mapped previews.
 //
 // Usage:
 //   node scripts/preview.js [options] [-- figlet-options]
 //
 // Options:
 //   -t, --text <text>    Sample text (default: pangram)
+//   -a, --all            Render every drawable glyph defined in each font
 //   -f, --filter <glob>  Only show fonts matching pattern (e.g. "AMC*")
 //   -n, --name           Also print font name before each sample
+//   -w, --watch          Stay open; re-render when the font or .chars file changes
 //   --no-color           Disable ANSI color
-//   --                   Everything after -- is passed directly to figlet
+//   --                   Extra layout flags: -c (center) -r (right) -w N
 //
 // Examples:
 //   node scripts/preview.js
 //   node scripts/preview.js -t "Hello World"
-//   node scripts/preview.js -t "Hello" -- -c        (centered)
+//   node scripts/preview.js -t "Hello" -- -c
 //   node scripts/preview.js -t "ABC" -f "Doom*"
+//   node scripts/preview.js -a -f Broadway.flf
+//   node scripts/preview.js -a -f "AMC Neko.flf" -w
 //   node scripts/preview.js -- -w 120
 
 const fs = require("fs");
 const path = require("path");
-const { spawnSync } = require("child_process");
+const {
+  loadFont,
+  drawableCodes,
+  listDefinedChars,
+  specimenText,
+  formatCharset,
+  renderFont,
+  parseFigletArgs,
+  parseCodeTag,
+} = require("./figlet-render");
+const { defaultCharsPath } = require("./font-chars");
 
 const ROOT = path.resolve(__dirname, "..");
 const DEFAULT_TEXT = "Mr. Jock, TV quiz PhD, bags few lynx.";
 
-// ANSI
 const ESC = "\x1b";
 const RESET = `${ESC}[0m`;
 const BOLD = `${ESC}[1m`;
 const CYAN = `${ESC}[36m`;
 const DIM = `${ESC}[2m`;
 const YELLOW = `${ESC}[33m`;
-
-// ---------------------------------------------------------------------------
-// Argument parsing
-// ---------------------------------------------------------------------------
+const GREEN = `${ESC}[32m`;
 
 let sampleText = DEFAULT_TEXT;
+let dumpAllChars = false;
 let filterPattern = null;
 let showName = true;
 let useColor = process.stdout.isTTY;
+let watchMode = false;
 let figletArgs = [];
+
+const HELP = `
+preview.js — render FIGlet fonts with a sample phrase
+
+Usage:
+  node scripts/preview.js [options] [-- figlet-options]
+
+Renders the font file as-is. A sibling .chars mapping is not applied
+(use apply / npm start for that).
+
+Options:
+  -t, --text <text>    Sample text  (default: "${DEFAULT_TEXT}")
+  -a, --all            Render every drawable glyph the font actually defines
+                       (skips empty placeholders; includes Latin-1 / extra codes)
+  -f, --filter <pat>   Only fonts whose filename matches pattern (* wildcards ok)
+  -w, --watch          Stay open and re-render when the font or .chars file changes
+  --no-color           Disable ANSI color output
+  -h, --help           Show this help
+
+Layout options (after --):
+  -c (center)  -r (right)  -w N (wrap width)
+
+Examples:
+  node scripts/preview.js
+  node scripts/preview.js -t "Hello World"
+  node scripts/preview.js -f "AMC*" -t "Test"
+  node scripts/preview.js -a -f Broadway.flf
+  node scripts/preview.js -a -f "AMC Neko.flf" --watch
+  node scripts/preview.js -- -c -w 160
+  node scripts/preview.js -t "ABC" -- -w 80
+`;
 
 const args = process.argv.slice(2);
 let i = 0;
@@ -56,33 +100,16 @@ while (i < args.length) {
     sampleText = args[++i];
   } else if (a === "-f" || a === "--filter") {
     filterPattern = args[++i];
+  } else if (a === "-a" || a === "--all" || a === "--all-chars") {
+    dumpAllChars = true;
   } else if (a === "-n" || a === "--name") {
     showName = true;
+  } else if (a === "-w" || a === "--watch" || a === "-watch") {
+    watchMode = true;
   } else if (a === "--no-color") {
     useColor = false;
   } else if (a === "-h" || a === "--help") {
-    console.log(`
-preview.js — render all FIGlet fonts with a sample phrase
-
-Usage:
-  node scripts/preview.js [options] [-- figlet-options]
-
-Options:
-  -t, --text <text>    Sample text  (default: "${DEFAULT_TEXT}")
-  -f, --filter <pat>   Only fonts whose filename matches pattern (* wildcards ok)
-  --no-color           Disable ANSI color output
-  -h, --help           Show this help
-
-Figlet options (after --):
-  Any flag supported by figlet, e.g. -c (center) -r (right) -w 120
-
-Examples:
-  node scripts/preview.js
-  node scripts/preview.js -t "Hello World"
-  node scripts/preview.js -f "AMC*" -t "Test"
-  node scripts/preview.js -- -c -w 160
-  node scripts/preview.js -t "ABC" -- -w 80
-`);
+    console.log(HELP);
     process.exit(0);
   }
   i++;
@@ -91,10 +118,6 @@ Examples:
 function c(code, str) {
   return useColor ? `${code}${str}${RESET}` : str;
 }
-
-// ---------------------------------------------------------------------------
-// Glob-style pattern matching (supports * and ?)
-// ---------------------------------------------------------------------------
 
 function matchGlob(pattern, str) {
   const re = new RegExp(
@@ -109,74 +132,216 @@ function matchGlob(pattern, str) {
   return re.test(str);
 }
 
-// ---------------------------------------------------------------------------
-// Collect fonts
-// ---------------------------------------------------------------------------
-
-const width = process.stdout.columns || 80;
-const sep = c(DIM, "─".repeat(width));
-
-const entries = fs.readdirSync(ROOT).sort();
-const fonts = entries.filter((e) => /\.[ft]lf$/.test(e));
-
-const filtered = filterPattern
-  ? fonts.filter((f) => matchGlob(filterPattern, f))
-  : fonts;
-
-if (filtered.length === 0) {
-  console.error(
-    `${YELLOW}No fonts found${filterPattern ? ` matching "${filterPattern}"` : ""}${RESET}`,
-  );
-  process.exit(1);
+function listFilteredFonts() {
+  const fonts = fs
+    .readdirSync(ROOT)
+    .filter((e) => /\.[ft]lf$/.test(e))
+    .sort();
+  if (!filterPattern) return fonts;
+  return fonts.filter((f) => matchGlob(filterPattern, f));
 }
 
-// ---------------------------------------------------------------------------
-// Render each font
-// ---------------------------------------------------------------------------
+function renderOnce(opts = {}) {
+  const termWidth = process.stdout.columns || 80;
+  const extra = parseFigletArgs(figletArgs);
+  const width = extra.width || termWidth;
+  const sep = c(DIM, "─".repeat(termWidth));
+  const chunks = [];
+  const filtered = listFilteredFonts();
 
-let errors = 0;
+  if (filtered.length === 0) {
+    return {
+      text:
+        `${YELLOW}No fonts found${filterPattern ? ` matching "${filterPattern}"` : ""}${RESET}\n`,
+      errors: 1,
+      fonts: [],
+    };
+  }
 
-for (const fontFile of filtered) {
-  const fontName = fontFile.replace(/\.[ft]lf$/, "");
+  let errors = 0;
 
-  const result = spawnSync(
-    "figlet",
-    [
-      "-d",
-      ROOT,
-      "-f",
-      fontName,
-      "-w",
-      String(width),
-      ...figletArgs,
-      sampleText,
-    ],
-    { encoding: "utf8" },
-  );
+  for (const fontFile of filtered) {
+    const fontPath = path.join(ROOT, fontFile);
 
-  if (result.error || result.status !== 0) {
-    process.stderr.write(
+    let font;
+    try {
+      font = loadFont(fontPath);
+    } catch (err) {
+      chunks.push(c(YELLOW, `⚠ Skipped ${fontFile}: ${err.message}\n`));
+      errors++;
+      continue;
+    }
+
+    let charset = null;
+    let text = sampleText;
+    if (dumpAllChars) {
+      charset = drawableCodes(font);
+      text = specimenText(charset);
+      if (!text) {
+        chunks.push(c(YELLOW, `⚠ Skipped ${fontFile}: no drawable glyphs\n`));
+        errors++;
+        continue;
+      }
+    }
+
+    let rendered;
+    try {
+      rendered = renderFont(text, {
+        fontPath,
+        width,
+        align: extra.align,
+        figletArgs,
+      });
+    } catch (err) {
+      chunks.push(c(YELLOW, `⚠ Skipped ${fontFile}: ${err.message}\n`));
+      errors++;
+      continue;
+    }
+
+    if (showName) {
+      let label = `▶ ${fontFile}`;
+      if (charset) {
+        label += `  (${charset.length} chars: ${formatCharset(charset)})`;
+      }
+      chunks.push(c(BOLD + CYAN, label) + "\n");
+    }
+    chunks.push(sep + "\n");
+    chunks.push(rendered + "\n");
+    chunks.push(sep + "\n\n");
+  }
+
+  if (errors > 0 && !opts.quietErrors) {
+    chunks.push(c(YELLOW, `\n⚠ ${errors} font(s) skipped due to errors\n`));
+  }
+
+  return { text: chunks.join(""), errors, fonts: filtered };
+}
+
+function debounce(fn, ms) {
+  let t;
+  return (...a) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...a), ms);
+  };
+}
+
+function watchPath(filePath, map, onChange) {
+  if (map.has(filePath) || !fs.existsSync(filePath)) return;
+  const fire = debounce(() => onChange(filePath), 80);
+  const start = () => {
+    try {
+      const w = fs.watch(filePath, (event) => {
+        if (event === "rename") {
+          w.close();
+          map.delete(filePath);
+          setTimeout(() => {
+            if (fs.existsSync(filePath)) {
+              start();
+              fire();
+            }
+          }, 50);
+          return;
+        }
+        fire();
+      });
+      map.set(filePath, w);
+    } catch {
+      /* file vanished */
+    }
+  };
+  start();
+}
+
+function startWatch() {
+  const fontWatchers = new Map();
+  const charsWatchers = new Map();
+  const redraw = debounce((reason) => {
+    const { text, fonts } = renderOnce({ quietErrors: true });
+    const names = fonts.join(", ") || filterPattern || "fonts";
+    const charsNote = fonts
+      .map((f) => path.basename(defaultCharsPath(path.join(ROOT, f))))
+      .filter((name, idx, arr) => arr.indexOf(name) === idx)
+      .join(", ");
+    process.stdout.write(`${ESC}[2J${ESC}[H`);
+    process.stdout.write(text);
+    process.stdout.write(
       c(
-        YELLOW,
-        `⚠ Skipped ${fontFile}: ${result.stderr || result.error?.message || "unknown error"}\n`,
+        DIM,
+        `watching ${names}` +
+          (charsNote ? `  +  ${charsNote}` : "") +
+          (reason ? `  (${reason})` : "") +
+          `  ${new Date().toLocaleTimeString()}  Ctrl+C to quit\n`,
       ),
     );
-    errors++;
-    continue;
+    attachWatches();
+  }, 80);
+
+  function attachWatches() {
+    for (const fontFile of listFilteredFonts()) {
+      const fontPath = path.join(ROOT, fontFile);
+      watchPath(fontPath, fontWatchers, () =>
+        redraw(path.basename(fontPath)),
+      );
+      watchPath(defaultCharsPath(fontPath), charsWatchers, (p) =>
+        redraw(path.basename(p)),
+      );
+    }
   }
 
-  const rendered = (result.stdout || "").replace(/\s+$/, "");
+  const dirWatcher = fs.watch(ROOT, (event, filename) => {
+    if (!filename) return;
+    const isFont = /\.[ft]lf$/i.test(filename);
+    const isChars = /\.chars$/i.test(filename);
+    if (!isFont && !isChars) return;
+    if (filterPattern) {
+      const stem = filename.replace(/\.(flf|tlf|chars)$/i, "");
+      const fontName = `${stem}.flf`;
+      const tlfName = `${stem}.tlf`;
+      if (
+        !matchGlob(filterPattern, fontName) &&
+        !matchGlob(filterPattern, tlfName) &&
+        !matchGlob(filterPattern, filename)
+      ) {
+        return;
+      }
+    }
+    attachWatches();
+    redraw(filename);
+  });
 
-  if (showName) {
-    process.stdout.write(c(BOLD + CYAN, `▶ ${fontFile}`) + "\n");
+  attachWatches();
+  redraw("start");
+
+  process.on("SIGINT", () => {
+    dirWatcher.close();
+    for (const w of fontWatchers.values()) w.close();
+    for (const w of charsWatchers.values()) w.close();
+    process.stdout.write(`\n${c(GREEN, "Watcher stopped.")}\n`);
+    process.exit(0);
+  });
+}
+
+if (require.main === module) {
+  if (watchMode) {
+    if (!process.stdout.isTTY) {
+      console.error("preview --watch requires a terminal (stdout is not a TTY).");
+      process.exit(1);
+    }
+    startWatch();
+  } else {
+    const { text, errors, fonts } = renderOnce();
+    if (fonts.length === 0) {
+      process.stderr.write(text);
+      process.exit(1);
+    }
+    process.stdout.write(text);
+    if (errors > 0) process.exitCode = 1;
   }
-  process.stdout.write(sep + "\n");
-  process.stdout.write(rendered + "\n");
-  process.stdout.write(sep + "\n\n");
 }
 
-if (errors > 0) {
-  process.stderr.write(
-    c(YELLOW, `\n⚠ ${errors} font(s) skipped due to errors\n`),
-  );
-}
+module.exports = {
+  listDefinedChars,
+  formatCharset,
+  specimenText,
+  parseCodeTag,
+};
