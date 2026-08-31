@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Classroom Survival</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="overlay">
+    <div id="title-card">
+      <h1>Classroom Survival</h1>
+      <p>You are stuck in math class. The bell is far away.</p>
+      <p class="subtitle">Use your phone for points — but look busy when the teacher turns around.</p>
+      <button id="start-btn" type="button">Take your seat</button>
+      <div class="controls">
+        <p class="hint desktop-hint">Hold <kbd>Space</kbd> to use your phone · Release before the teacher catches you</p>
+        <p class="hint mobile-hint">Hold the screen to use your phone · Release when you hear the warning</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="hud" hidden>
+    <div id="score-panel">
+      <span id="score-label">Score</span>
+      <span id="score">0</span>
+    </div>
+    <div id="streak-panel">
+      <span id="streak-label">Streak</span>
+      <span id="streak">0</span>
+    </div>
+    <div id="time-panel">
+      <span id="time-label">Until bell</span>
+      <span id="timer">2:00</span>
+    </div>
+    <div id="alert" hidden>Teacher turning!</div>
+  </div>
+
+  <div id="game-over" hidden>
+    <div id="result-card">
+      <h2 id="result-title">Busted!</h2>
+      <p id="result-message">Mrs. Henderson saw the glow on your face.</p>
+      <p id="final-score">Score: 0</p>
+      <button id="retry-btn" type="button">Try again</button>
+    </div>
+  </div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
