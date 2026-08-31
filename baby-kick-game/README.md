@@ -4,22 +4,19 @@ A mobile-first browser game (and installable PWA). Cartoon babies bounce around 
 
 ## Play on mobile
 
-### Option 1: Install as an app (PWA)
+### Play now (no setup)
 
-1. Serve the game over HTTPS or localhost (required for install):
-   ```bash
-   cd baby-kick-game
-   python3 -m http.server 8080
-   ```
-2. Open the URL on your phone (same Wi‑Fi network, or deploy to GitHub Pages / Netlify).
-3. **Android (Chrome):** Tap the install banner, or Menu → **Install app**.
-4. **iPhone (Safari):** Tap **Share** → **Add to Home Screen**.
+**https://htmlpreview.github.io/?https://raw.githubusercontent.com/robhybrid/figlet-fonts/main/baby-kick-game/play.html**
 
-The game runs fullscreen, works offline after the first load, and keeps your screen awake while playing.
+Open that link on your phone, tap **Start Kicking**, then swipe with your finger.
 
-### Option 2: Open in browser
+### Install as an app (best experience)
 
-Visit the served URL and tap **Start Kicking**, then swipe with your finger.
+Enable GitHub Pages once (repo **Settings → Pages → Branch: `gh-pages` → Save**), then use:
+
+**https://robhybrid.github.io/figlet-fonts/**
+
+Or serve locally:
 
 ## Desktop
 
