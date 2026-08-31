@@ -2,7 +2,7 @@
   "name": "Baby Boot — Stress Relief",
   "short_name": "Baby Boot",
   "description": "Swipe to kick cartoon babies and relieve stress. Build combos, lower your stress meter, reach Zen Mode.",
-  "start_url": "./play.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "fullscreen",
   "orientation": "any",
