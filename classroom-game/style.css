@@ -166,11 +166,28 @@ kbd {
   align-self: center;
   padding: 0.5rem 1rem;
   border-radius: 8px;
-  background: rgba(180, 40, 40, 0.85);
+  background: rgba(160, 90, 30, 0.9);
   color: #fff;
   font-weight: 700;
   font-size: 0.9rem;
   animation: pulse 0.5s ease-in-out infinite alternate;
+}
+
+#task-banner {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(92vw, 520px);
+  padding: 0.65rem 1.2rem;
+  border-radius: 10px;
+  background: rgba(20, 16, 12, 0.82);
+  border: 1px solid rgba(255, 220, 160, 0.14);
+  font-size: 0.88rem;
+  color: #d8c8b0;
+  text-align: center;
+  pointer-events: none;
+  z-index: 5;
 }
 
 @keyframes pulse {
