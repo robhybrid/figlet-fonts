@@ -2,7 +2,7 @@
     ┣╸ ┃┃╺┓┃  ┣╸  ┃    ┣╸ ┃ ┃┃┗┫ ┃ ┗━┓
     ╹  ╹┗━┛┗━╸┗━╸ ╹    ╹  ┗━┛╹ ╹ ╹ ┗━┛
 
-A curated collection of **439** ASCII art fonts for [figlet](http://www.figlet.org/) and [toilet](http://caca.zoy.org/wiki/toilet) — 398 `.flf` + 41 `.tlf` files, plus 39 `.flc` control/encoding files.
+A curated collection of **440** ASCII art fonts for [figlet](http://www.figlet.org/) and [toilet](http://caca.zoy.org/wiki/toilet) — 399 `.flf` + 41 `.tlf` files, plus 39 `.flc` control/encoding files.
 
 ---
 
