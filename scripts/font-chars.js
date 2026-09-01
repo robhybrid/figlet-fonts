@@ -23,6 +23,8 @@ const {
   specimenText,
   formatCharset,
   renderFont,
+  parseCodeTag,
+  REQUIRED_CODES,
 } = require("./figlet-render");
 
 // ---------------------------------------------------------------------------
@@ -56,6 +58,37 @@ function fontFromChars(charsPath) {
   return flf; // fallback even if missing
 }
 
+function isCharsPath(p) {
+  return /\.chars$/i.test(p);
+}
+
+function isFontPath(p) {
+  return /\.[ft]lf$/i.test(p);
+}
+
+/**
+ * Accept `font.flf chars.chars`, the reverse order, or a single file
+ * (the sibling is inferred).
+ */
+function resolveApplyInputs(positional) {
+  const files = positional.map((p) => path.resolve(p));
+  let fontPath = files.find(isFontPath) || null;
+  let charsPath = files.find(isCharsPath) || null;
+
+  if (files.length === 1 && !fontPath && !charsPath) {
+    const stem = files[0];
+    const flf = stem.endsWith(".flf") ? stem : stem + ".flf";
+    if (fs.existsSync(flf)) fontPath = flf;
+    else if (fs.existsSync(stem + ".flf")) fontPath = stem + ".flf";
+    charsPath = defaultCharsPath(fontPath || flf);
+  }
+
+  if (fontPath && !charsPath) charsPath = defaultCharsPath(fontPath);
+  if (charsPath && !fontPath) fontPath = fontFromChars(charsPath);
+
+  return { fontPath, charsPath };
+}
+
 // ---------------------------------------------------------------------------
 // FLF parser helpers
 // ---------------------------------------------------------------------------
@@ -65,20 +98,58 @@ function parseFlf(src) {
   const lines = src.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
   const header = lines[0];
   const hardblank = header[5];
-  const parts = header.split(" ");
+  const parts = header.split(/\s+/);
+  const height = parseInt(parts[1], 10);
   const numComments = parseInt(parts[5] || "0", 10);
   const commentLines = lines.slice(1, 1 + numComments);
   const bodyLines = lines.slice(1 + numComments);
-  return { header, commentLines, hardblank, bodyLines };
+  return { header, commentLines, hardblank, bodyLines, height, lines };
 }
 
-function forEachGlyphLine(bodyLines, fn) {
-  for (let i = 0; i < bodyLines.length; i++) {
-    const raw = bodyLines[i];
-    if (!raw.endsWith("@")) continue;
-    const content = raw.replace(/@+$/, "");
-    fn(content, raw, i);
+/** Split a glyph row into drawing content + trailing endmark(s).
+ *  The endmark is the last character of the line (FIGlet spec), not hardcoded. */
+function splitEndmark(raw) {
+  if (!raw.length) return { content: raw, marks: "" };
+  const end = raw[raw.length - 1];
+  let i = raw.length - 1;
+  while (i >= 0 && raw[i] === end) i--;
+  return { content: raw.slice(0, i + 1), marks: raw.slice(i + 1) };
+}
+
+function walkGlyphLineIndexes(bodyLines, height, onLine) {
+  let i = 0;
+  const consumeGlyph = () => {
+    for (let h = 0; h < height && i < bodyLines.length; h++, i++) {
+      onLine(i, bodyLines[i]);
+    }
+  };
+  for (let g = 0; g < REQUIRED_CODES.length; g++) consumeGlyph();
+  while (i < bodyLines.length) {
+    while (i < bodyLines.length && bodyLines[i].trim() === "") i++;
+    if (i >= bodyLines.length) break;
+    if (parseCodeTag(bodyLines[i]) === null) break;
+    i++;
+    consumeGlyph();
   }
+}
+
+function forEachGlyphLine(parsed, fn) {
+  const { bodyLines, height } = parsed;
+  walkGlyphLineIndexes(bodyLines, height, (i, raw) => {
+    const { content, marks } = splitEndmark(raw);
+    fn(content, raw, i, marks);
+  });
+}
+
+function rewriteGlyphContents(src, transformContent) {
+  const parsed = parseFlf(src);
+  const { commentLines, bodyLines, height } = parsed;
+  const newBody = bodyLines.slice();
+  walkGlyphLineIndexes(newBody, height, (i, raw) => {
+    const { content, marks } = splitEndmark(raw);
+    newBody[i] = transformContent(content) + marks;
+  });
+  return [parsed.header, ...commentLines, ...newBody].join("\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -87,10 +158,11 @@ function forEachGlyphLine(bodyLines, fn) {
 
 function cmdExtract(fontPath, outputPath) {
   const src = fs.readFileSync(fontPath, "utf8");
-  const { hardblank, bodyLines } = parseFlf(src);
+  const parsed = parseFlf(src);
+  const { hardblank } = parsed;
 
   const charSet = new Set();
-  forEachGlyphLine(bodyLines, (content) => {
+  forEachGlyphLine(parsed, (content) => {
     for (const ch of content) {
       if (ch === " ") continue;
       if (ch === hardblank) continue;
@@ -112,7 +184,8 @@ function cmdExtract(fontPath, outputPath) {
     `# • Left side  = original character (do not change)`,
     `# • Right side = replacement character(s) — can be multi-char`,
     `# • Leave the right side unchanged, empty, or omit the line to pass through`,
-    `# • Lines starting with # are ignored`,
+    `# • Comment lines start with "# " (hash then a space)`,
+    `# • To replace the "#" character itself, use:  # → █`,
     `# • The hardblank (${hardblank}) is omitted — it prints as a space and is never replaced`,
     `#`,
     `# Apply with:`,
@@ -144,7 +217,16 @@ function parseMapping(charsFile, charsPath) {
   lines.forEach((line, idx) => {
     const n = idx + 1;
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) return;
+    if (!trimmed) return;
+
+    // "# → X" maps the drawing character "#". Other "#..." lines are comments.
+    const hashMap = trimmed.match(/^#\s*(→|->)\s*(.*)$/u);
+    if (hashMap) {
+      const to = hashMap[2].trimEnd();
+      if (to && to !== "#") mapping.set("#", to);
+      return;
+    }
+    if (trimmed.startsWith("#")) return;
 
     const good = trimmed.match(/^(.+?)\s*(?:→|->)\s*(.*)$/u);
     if (good) {
@@ -179,33 +261,21 @@ function formatMappingErrors(errors, charsPath) {
 }
 
 function applyMappingToSource(src, mapping) {
-  const { commentLines } = parseFlf(src);
-  const headerEnd = 1 + commentLines.length;
-  const allLines = src.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-
-  return allLines
-    .map((raw, idx) => {
-      if (idx < headerEnd) return raw;
-      if (!raw.endsWith("@")) return raw;
-
-      const trailingAt = raw.match(/@+$/)[0];
-      const content = raw.slice(0, raw.length - trailingAt.length);
-
-      let newContent = content;
-      for (const [from, to] of mapping) {
-        const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        newContent = newContent.replace(new RegExp(escaped, "gu"), to);
-      }
-
-      return newContent + trailingAt;
-    })
-    .join("\n");
+  return rewriteGlyphContents(src, (content) => {
+    let newContent = content;
+    for (const [from, to] of mapping) {
+      const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      newContent = newContent.replace(new RegExp(escaped, "gu"), to);
+    }
+    return newContent;
+  });
 }
 
 function collectGlyphChars(src) {
-  const { hardblank, bodyLines } = parseFlf(src);
+  const parsed = parseFlf(src);
+  const { hardblank } = parsed;
   const used = new Set();
-  forEachGlyphLine(bodyLines, (content) => {
+  forEachGlyphLine(parsed, (content) => {
     for (const ch of content) {
       if (ch !== " " && ch !== hardblank) used.add(ch);
     }
@@ -229,20 +299,17 @@ function pickUnusedHardblank(src, mapping, oldHb) {
 
 function relocateHardblankInSource(src, oldHb, newHb) {
   if (!oldHb || oldHb === newHb) return src;
-  const lines = src.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-  const { commentLines } = parseFlf(src);
-  const headerEnd = 1 + commentLines.length;
-  if (lines[0] && lines[0].length > 5) {
-    lines[0] = lines[0].slice(0, 5) + newHb + lines[0].slice(6);
+  const parsed = parseFlf(src);
+  let header = parsed.header;
+  if (header && header.length > 5) {
+    header = header.slice(0, 5) + newHb + header.slice(6);
   }
-  for (let i = headerEnd; i < lines.length; i++) {
-    const raw = lines[i];
-    if (!raw.endsWith("@")) continue;
-    const marks = raw.match(/@+$/)[0];
-    const content = raw.slice(0, raw.length - marks.length);
-    lines[i] = content.split(oldHb).join(newHb) + marks;
-  }
-  return lines.join("\n");
+  const body = rewriteGlyphContents(src, (content) =>
+    content.split(oldHb).join(newHb),
+  );
+  // rewriteGlyphContents keeps the original header; swap in the new hardblank.
+  const rest = body.split("\n").slice(1).join("\n");
+  return header + "\n" + rest;
 }
 
 function applyMapping(fontPath, charsPath, outputPath, opts = {}) {
@@ -475,8 +542,9 @@ font-chars.js — FIGlet font character extractor/replacer
     Extract unique drawing characters to a mapping file.
     Default output: <input>.chars (same directory as font)
 
-  apply <input.flf> <file.chars> [options]
+  apply [<input.flf>] [<file.chars>] [options]
     Apply replacements, preview the result, then ask before writing.
+    Font and .chars may be in either order; a single file infers its sibling.
     Default output: <input>-b.flf
       -n, --dry-run     Preview only (do not write)
       -y, --yes         Write without prompting
@@ -507,9 +575,13 @@ Convention:
 apply — preview a .chars mapping, then optionally write a variant font
 
 Usage:
-  node scripts/font-chars.js apply <input.flf> <file.chars> [options]
-  npm run apply -- Broadway.flf Broadway.chars
-  npm run apply -- Broadway.flf Broadway.chars --dry-run
+  node scripts/font-chars.js apply <input.flf> [file.chars] [options]
+  node scripts/font-chars.js apply <file.chars> [input.flf] [options]
+  npm run apply -- Broadway.flf
+  npm run apply -- Broadway.chars --dry-run
+
+Font and .chars may be in either order. One file is enough; the sibling
+is inferred (Broadway.flf ↔ Broadway.chars).
 
 Options:
   -h, --help           Show this help
@@ -521,6 +593,7 @@ Options:
 
 For a live dry-run that watches the font and .chars file:
   npm start -- Broadway.flf
+  npm run preview -- Broadway.flf -w
 `);
       process.exit(0);
     }
@@ -537,22 +610,61 @@ For a live dry-run that watches the font and .chars file:
         : null;
 
     const positional = [];
+    const unknownFlags = [];
     for (let i = 0; i < applyArgs.length; i++) {
       if (applyArgs[i] === "--output") {
         i++;
         continue;
       }
-      if (applyArgs[i].startsWith("-")) continue;
+      if (applyArgs[i] === "-w" || applyArgs[i] === "--watch") {
+        console.error(
+          "Note: -w/--watch belongs to preview, not apply. Continuing with apply.\n" +
+            "  Live mapping preview: npm start -- <font.flf>",
+        );
+        continue;
+      }
+      if (applyArgs[i].startsWith("-")) {
+        if (
+          !["-y", "--yes", "-n", "--no-write", "--dry-run", "--no-preview", "-h", "--help"].includes(
+            applyArgs[i],
+          )
+        ) {
+          unknownFlags.push(applyArgs[i]);
+        }
+        continue;
+      }
       positional.push(applyArgs[i]);
     }
-    if (!positional[0] || !positional[1]) {
-      console.error("Usage: apply <input.flf> <file.chars> [--output file] [-y]");
+    if (unknownFlags.length) {
+      console.error(`Unknown option: ${unknownFlags.join(" ")}`);
+      process.exit(1);
+    }
+    if (!positional[0]) {
+      console.error(
+        "Usage: apply <input.flf|file.chars> [the other file] [--output file] [-y]",
+      );
+      process.exit(1);
+    }
+
+    const { fontPath, charsPath } = resolveApplyInputs(positional);
+    if (!fontPath || !charsPath) {
+      console.error(
+        "Usage: apply <input.flf|file.chars> [the other file] [--output file] [-y]",
+      );
+      process.exit(1);
+    }
+    if (!fs.existsSync(fontPath)) {
+      console.error(`Font not found: ${fontPath}`);
+      process.exit(1);
+    }
+    if (!fs.existsSync(charsPath)) {
+      console.error(`Mapping file not found: ${charsPath}`);
       process.exit(1);
     }
 
     cmdApplyCli(
-      path.resolve(positional[0]),
-      path.resolve(positional[1]),
+      fontPath,
+      charsPath,
       outputPath,
       { yes, noWrite, noPreview },
     ).catch((err) => {

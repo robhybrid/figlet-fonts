@@ -52,7 +52,7 @@ const GREEN = `${ESC}[32m`;
 
 let sampleText = DEFAULT_TEXT;
 let dumpAllChars = false;
-let filterPattern = null;
+let filterPatterns = [];
 let showName = true;
 let useColor = process.stdout.isTTY;
 let watchMode = false;
@@ -62,7 +62,7 @@ const HELP = `
 preview.js — render FIGlet fonts with a sample phrase
 
 Usage:
-  node scripts/preview.js [options] [-- figlet-options]
+  node scripts/preview.js [font.flf | glob] [options] [-- figlet-options]
 
 Renders the font file as-is. A sibling .chars mapping is not applied
 (use apply / npm start for that).
@@ -72,6 +72,7 @@ Options:
   -a, --all            Render every drawable glyph the font actually defines
                        (skips empty placeholders; includes Latin-1 / extra codes)
   -f, --filter <pat>   Only fonts whose filename matches pattern (* wildcards ok)
+                       (a bare filename or glob also works: preview Broadway.flf)
   -w, --watch          Stay open and re-render when the font or .chars file changes
   --no-color           Disable ANSI color output
   -h, --help           Show this help
@@ -81,12 +82,11 @@ Layout options (after --):
 
 Examples:
   node scripts/preview.js
+  node scripts/preview.js Broadway.flf
+  node scripts/preview.js -a Broadway.flf -w
   node scripts/preview.js -t "Hello World"
-  node scripts/preview.js -f "AMC*" -t "Test"
-  node scripts/preview.js -a -f Broadway.flf
-  node scripts/preview.js -a -f "AMC Neko.flf" --watch
+  node scripts/preview.js "AMC*" -t "Test"
   node scripts/preview.js -- -c -w 160
-  node scripts/preview.js -t "ABC" -- -w 80
 `;
 
 const args = process.argv.slice(2);
@@ -99,7 +99,7 @@ while (i < args.length) {
   } else if (a === "-t" || a === "--text") {
     sampleText = args[++i];
   } else if (a === "-f" || a === "--filter") {
-    filterPattern = args[++i];
+    filterPatterns.push(normalizeFilter(args[++i]));
   } else if (a === "-a" || a === "--all" || a === "--all-chars") {
     dumpAllChars = true;
   } else if (a === "-n" || a === "--name") {
@@ -111,12 +111,22 @@ while (i < args.length) {
   } else if (a === "-h" || a === "--help") {
     console.log(HELP);
     process.exit(0);
+  } else if (!a.startsWith("-")) {
+    filterPatterns.push(normalizeFilter(a));
   }
   i++;
 }
 
 function c(code, str) {
   return useColor ? `${code}${str}${RESET}` : str;
+}
+
+function normalizeFilter(raw) {
+  if (raw == null || raw === "") return raw;
+  let pat = path.basename(String(raw));
+  if (/\.chars$/i.test(pat)) pat = pat.replace(/\.chars$/i, ".flf");
+  if (!/[*?]/.test(pat) && !/\.[ft]lf$/i.test(pat)) pat += ".flf";
+  return pat;
 }
 
 function matchGlob(pattern, str) {
@@ -137,8 +147,16 @@ function listFilteredFonts() {
     .readdirSync(ROOT)
     .filter((e) => /\.[ft]lf$/.test(e))
     .sort();
-  if (!filterPattern) return fonts;
-  return fonts.filter((f) => matchGlob(filterPattern, f));
+  if (!filterPatterns.length) return fonts;
+  return fonts.filter((f) =>
+    filterPatterns.some(
+      (p) => matchGlob(p, f) || matchGlob(p.replace(/\.[ft]lf$/i, ".tlf"), f),
+    ),
+  );
+}
+
+function filterLabel() {
+  return filterPatterns.join(", ");
 }
 
 function renderOnce(opts = {}) {
@@ -152,7 +170,7 @@ function renderOnce(opts = {}) {
   if (filtered.length === 0) {
     return {
       text:
-        `${YELLOW}No fonts found${filterPattern ? ` matching "${filterPattern}"` : ""}${RESET}\n`,
+        `${YELLOW}No fonts found${filterPatterns.length ? ` matching "${filterLabel()}"` : ""}${RESET}\n`,
       errors: 1,
       fonts: [],
     };
@@ -257,7 +275,7 @@ function startWatch() {
   const charsWatchers = new Map();
   const redraw = debounce((reason) => {
     const { text, fonts } = renderOnce({ quietErrors: true });
-    const names = fonts.join(", ") || filterPattern || "fonts";
+    const names = fonts.join(", ") || filterLabel() || "fonts";
     const charsNote = fonts
       .map((f) => path.basename(defaultCharsPath(path.join(ROOT, f))))
       .filter((name, idx, arr) => arr.indexOf(name) === idx)
@@ -293,14 +311,18 @@ function startWatch() {
     const isFont = /\.[ft]lf$/i.test(filename);
     const isChars = /\.chars$/i.test(filename);
     if (!isFont && !isChars) return;
-    if (filterPattern) {
+    if (filterPatterns.length) {
       const stem = filename.replace(/\.(flf|tlf|chars)$/i, "");
-      const fontName = `${stem}.flf`;
-      const tlfName = `${stem}.tlf`;
+      const candidates = [
+        filename,
+        `${stem}.flf`,
+        `${stem}.tlf`,
+        `${stem}.chars`,
+      ];
       if (
-        !matchGlob(filterPattern, fontName) &&
-        !matchGlob(filterPattern, tlfName) &&
-        !matchGlob(filterPattern, filename)
+        !filterPatterns.some((p) =>
+          candidates.some((name) => matchGlob(p, name)),
+        )
       ) {
         return;
       }

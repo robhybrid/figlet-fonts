@@ -463,5 +463,7 @@ module.exports = {
   renderFont,
   parseFigletArgs,
   parseCodeTag,
+  stripEndmark,
   detectSystemFiglet,
+  REQUIRED_CODES,
 };

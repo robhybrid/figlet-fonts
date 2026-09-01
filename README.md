@@ -2,7 +2,7 @@
     ┣╸ ┃┃╺┓┃  ┣╸  ┃    ┣╸ ┃ ┃┃┗┫ ┃ ┗━┓
     ╹  ╹┗━┛┗━╸┗━╸ ╹    ╹  ┗━┛╹ ╹ ╹ ┗━┛
 
-A curated collection of **440** ASCII art fonts for [figlet](http://www.figlet.org/) and [toilet](http://caca.zoy.org/wiki/toilet) — 399 `.flf` + 41 `.tlf` files, plus 39 `.flc` control/encoding files.
+A curated collection of **442** ASCII art fonts for [figlet](http://www.figlet.org/) and [toilet](http://caca.zoy.org/wiki/toilet) — 401 `.flf` + 41 `.tlf` files, plus 39 `.flc` control/encoding files.
 
 ---
 
@@ -33,16 +33,17 @@ Renders the font file as-is. A sibling `.chars` mapping is **not** applied — u
 
 ```bash
 node scripts/preview.js                        # all fonts, default sample text
+node scripts/preview.js Broadway.flf           # one font (no -f needed)
+node scripts/preview.js -a Broadway.flf -w     # all glyphs; refresh on save
 node scripts/preview.js -t "Hello World"       # custom text
-node scripts/preview.js -f "AMC*"              # filter by filename glob
+node scripts/preview.js "AMC*"                 # filter by filename glob
 node scripts/preview.js -- -c                  # pass figlet flags (centered)
 node scripts/preview.js -t "ABC" -- -w 120     # custom text + custom width
-node scripts/preview.js -a -f Broadway.flf     # every glyph the font defines
-node scripts/preview.js -a -f "AMC Neko.flf" -w  # stay open; refresh on save
 node scripts/preview.js --no-color | less      # pipe-friendly (no ANSI)
 
 # npm shortcut
-npm run preview -- -t "Hello" -f "Doom*"
+npm run preview -- Broadway.flf
+npm run preview -- -t "Hello" "Doom*"
 ```
 
 Uses the system `figlet` binary when it is on `PATH`. If it is missing, falls back to the npm [`figlet`](https://www.npmjs.com/package/figlet) package (`npm install`).
@@ -53,7 +54,7 @@ Options:
 | --------------------- | --------------------------------------------------------------- |
 | `-t, --text <text>`   | Sample text (default: `Mr. Jock, TV quiz PhD, bags few lynx.`)  |
 | `-a, --all`           | Render every drawable glyph defined in the font (not a fixed alphabet) |
-| `-f, --filter <glob>` | Filter fonts by filename (`*` and `?` wildcards)                |
+| `-f, --filter <glob>` | Filter fonts by filename (`*` and `?` wildcards). A bare filename is enough. |
 | `-w, --watch`         | Stay open; re-render when the font or sibling `.chars` file changes |
 | `--no-color`          | Disable ANSI color (auto-disabled when piping)                  |
 | `--`                  | Pass remaining args directly to figlet (`-c`, `-r`, `-w`, etc.) |
@@ -95,15 +96,17 @@ node scripts/font-chars.js extract amcaaa01.flf
 # Edit amcaaa01.chars (e.g. S → ▓, | → ┃)
 
 # Apply: preview the result, then confirm write
-node scripts/font-chars.js apply amcaaa01.flf amcaaa01.chars
-node scripts/font-chars.js apply amcaaa01.flf amcaaa01.chars -y          # write without prompting
-node scripts/font-chars.js apply amcaaa01.flf amcaaa01.chars --no-write  # preview only
+# Font and .chars can be in either order; one file infers the other
+node scripts/font-chars.js apply amcaaa01.flf
+node scripts/font-chars.js apply amcaaa01.chars -y          # write without prompting
+node scripts/font-chars.js apply amcaaa01.chars --no-write  # preview only
 
 # Custom output path
 node scripts/font-chars.js apply amcaaa01.flf amcaaa01.chars --output my-font.flf
 
 # npm shortcuts
 npm run extract -- amcaaa01.flf
+npm run apply   -- amcaaa01.chars
 npm run apply   -- amcaaa01.flf amcaaa01.chars
 ```
 
