@@ -29,7 +29,8 @@
     "install-fonts": "bash scripts/install.sh --user",
     "extract": "node scripts/font-chars.js extract",
     "apply": "node scripts/font-chars.js apply",
-    "preview": "node scripts/preview.js"
+    "preview": "node scripts/preview.js",
+    "mosaic": "python3 scripts/mosaic.py"
   },
   "dependencies": {
     "figlet": "^1.11.4"

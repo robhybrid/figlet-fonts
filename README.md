@@ -2,7 +2,7 @@
     ┣╸ ┃┃╺┓┃  ┣╸  ┃    ┣╸ ┃ ┃┃┗┫ ┃ ┗━┓
     ╹  ╹┗━┛┗━╸┗━╸ ╹    ╹  ┗━┛╹ ╹ ╹ ┗━┛
 
-A curated collection of **442** ASCII art fonts for [figlet](http://www.figlet.org/) and [toilet](http://caca.zoy.org/wiki/toilet) — 401 `.flf` + 41 `.tlf` files, plus 39 `.flc` control/encoding files.
+A curated collection of **444** ASCII art fonts for [figlet](http://www.figlet.org/) and [toilet](http://caca.zoy.org/wiki/toilet) — 403 `.flf` + 41 `.tlf` files, plus 39 `.flc` control/encoding files.
 
 ---
 
@@ -118,6 +118,23 @@ When `npm start` is running, saving a `.chars` file applies the mapping in memor
 
 ---
 
+### `mosaic.py` — rasterize an outline font to block mosaic
+
+Draws a TrueType/OpenType face with FreeType hinting (native bytecode when the font has it) onto a 0.6-wide grid, then packs 2×2 pixels into U+2580–259F quadrants (no shade blocks ░▒▓). Prints to stdout like figlet, or writes a `.flf`. Needs `freetype-py`.
+
+```bash
+python3 scripts/mosaic.py -f Denmark -s 12 Denmark
+python3 scripts/mosaic.py -f Denmark -s 12 -p
+python3 scripts/mosaic.py -f Denmark -s 16 -p Hello
+python3 scripts/mosaic.py -f Denmark -s 12 -p -w 80
+python3 scripts/mosaic.py -f Denmark -s 12 --flf Denmark-12.flf
+npm run mosaic -- -f Denmark -s 12 -p
+```
+
+`-f` is a family name, file name, or path. Searches `~/Downloads`, `~/Library/Fonts`, and the system font folders (`MOSAIC_FONT_PATH` adds extra roots). `--list` dumps what it can see. `-p` wraps at the terminal width (figlet-style, glyph boundaries), or 80 columns if that cannot be determined; `-w` overrides.
+
+---
+
 ### `generate_examples.sh` — regenerate Examples.md
 
 ```bash
@@ -140,5 +157,7 @@ A [GitHub Actions workflow](.github/workflows/regenerate-examples.yml) runs this
 | [figlet 2.2.5](https://github.com/cmatsuoka/figlet)                     |     2 | `l4me`, `nvscript`                                                                                                                                                                                                                                                                                                   |
 | [cszach/figlet-fonts](https://github.com/cszach/figlet-fonts)           |     2 | `3x5-b`, `4Max-b` (bold variants), 39 `.flc` control files                                                                                                                                                                                                                                                           |
 | [unlessgames/figlet-fonts](https://github.com/unlessgames/figlet-fonts) |     3 | `terminus`, `terminus_dots`, `wideterm` — merged via [xero PR #31](https://github.com/xero/figlet-fonts/pull/31)                                                                                                                                                                                                     |
+| [ChicagoSB](https://github.com/simonboak/ChicagoSB)                     |     1 | `Chicago` — Susan Kare’s 1984 Mac OS bitmap, packed 2×2 from Simon Boak’s OFL revival                                                                                                                                                                                                                                |
+| [Denmark Regular](https://fontsgeek.com/fonts/Denmark-Regular)          |     1 | `Denmark-20` — outline rasterized to 2×2 mosaic (`scripts/mosaic.py`). Source TTF is not in the repo.                                                                                                                                                                                                                |
 
 View all font examples at [Examples.md](Examples.md).
