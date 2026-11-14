@@ -1,0 +1,43 @@
+{
+  "name": "@clui/core",
+  "version": "0.1.0",
+  "description": "CLUI — Command Line UI framework for Node.js terminals",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "clui-file-browser": "./dist/examples/file-browser.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "demo": "npm run build && node dist/examples/file-browser.js",
+    "demo:watch": "tsc -p tsconfig.json --watch & node --watch dist/examples/file-browser.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "tui",
+    "terminal",
+    "cli",
+    "ui",
+    "clui"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  }
+}

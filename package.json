@@ -30,7 +30,10 @@
     "extract": "node scripts/font-chars.js extract",
     "apply": "node scripts/font-chars.js apply",
     "preview": "node scripts/preview.js",
-    "mosaic": "python3 scripts/mosaic.py"
+    "mosaic": "python3 scripts/mosaic.py",
+    "clui:build": "npm run build --prefix packages/clui",
+    "clui:demo": "npm run demo --prefix packages/clui",
+    "clui:typecheck": "npm run typecheck --prefix packages/clui"
   },
   "dependencies": {
     "figlet": "^1.11.4"

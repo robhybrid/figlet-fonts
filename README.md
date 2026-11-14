@@ -161,3 +161,16 @@ A [GitHub Actions workflow](.github/workflows/regenerate-examples.yml) runs this
 | [Denmark Regular](https://fontsgeek.com/fonts/Denmark-Regular)          |     1 | `Denmark-20` — outline rasterized to 2×2 mosaic (`scripts/mosaic.py`). Source TTF is not in the repo.                                                                                                                                                                                                                |
 
 View all font examples at [Examples.md](Examples.md).
+
+---
+
+## CLUI (terminal UI framework)
+
+This repo also hosts an early TypeScript **CLUI** package under [`packages/clui`](packages/clui) — layouts, themes, mouse/keyboard, and a file-browser demo. Font scripts above are unchanged.
+
+```bash
+npm install --prefix packages/clui
+npm run clui:demo
+```
+
+See [`packages/clui/README.md`](packages/clui/README.md) for API sketch and terminal requirements.
